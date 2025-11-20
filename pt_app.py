@@ -103,10 +103,7 @@ if sh:
                         not_goster = row["notlar"] if row["notlar"] else "Normal"
                         st.caption(f"📝 {not_goster}")
                         
-                        # BUTONLAR (DÜŞ ve İPTAL YAN YANA)
                         b1, b2 = st.columns(2)
-                        
-                        # --- DÜŞME BUTONU ---
                         if b1.button("DÜŞ 📉", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler")
                             gercek_satir = row.name + 2 
@@ -118,7 +115,6 @@ if sh:
                             time.sleep(1)
                             st.rerun()
                         
-                        # --- İPTAL (GERİ AL) BUTONU ---
                         if b2.button("İPTAL ↩️", key=f"i_{idx}"):
                             ws = sh.worksheet("Ogrenciler")
                             gercek_satir = row.name + 2
@@ -168,52 +164,5 @@ if sh:
                 st.divider()
                 st.write("📜 **Geçmiş**")
                 if not df_log.empty:
-                    # İlgili öğrencinin loglarını filtrele ve ters sırala (yeniden eskiye)
                     kisi_log = df_log[df_log["ogrenci"] == sec].copy()
-                    if not kisi_log.empty:
-                        # Tarih sütununu datetime objesine çevirip sıralayalım
-                        try:
-                            kisi_log["tarih_dt"] = pd.to_datetime(kisi_log["tarih"], errors='coerce')
-                            kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
-                            # Tabloda göstermek için gereksiz sütunları atalım
-                            st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
-                        except:
-                            st.dataframe(kisi_log, use_container_width=True)
-                    else:
-                        st.info("Kayıt yok.")
-
-    # === 3. ÖLÇÜMLER ===
-    elif menu == "Vücut Ölçümleri":
-        st.header("📏 Ölçümler")
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            if not df_ogrenci.empty:
-                o_sec = st.selectbox("Öğrenci", df_ogrenci["isim"].tolist())
-                with st.form("olcum"):
-                    trh = st.date_input("Tarih")
-                    kg = st.number_input("Kilo")
-                    yg = st.number_input("Yağ")
-                    bl = st.number_input("Bel")
-                    if st.form_submit_button("Kaydet"):
-                        sh.worksheet("Olcumler").append_row([o_sec, str(trh), kg, yg, bl])
-                        st.success("Kaydedildi")
-                        st.rerun()
-        with c2:
-            if not df_measure.empty and o_sec:
-                kisi_olcum = df_measure[df_measure["ogrenci"] == o_sec]
-                if not kisi_olcum.empty:
-                    st.line_chart(kisi_olcum, x="tarih", y="kilo")
-                    st.dataframe(kisi_olcum)
-
-    # === 4. RAPORLAR ===
-    elif menu == "Raporlar":
-        st.header("📊 Raporlar")
-        if not df_log.empty:
-            # Tarih formatını düzelt
-            df_log["tarih"] = pd.to_datetime(df_log["tarih"], errors='coerce')
-            df_log["Ay"] = df_log["tarih"].dt.strftime("%Y-%m")
-            
-            dersler = df_log[df_log["islem"] == "Ders Yapıldı"]
-            
-            st.bar_chart(dersler["Ay"].value_counts())
-            st.dataframe(df_log.sort_values("tarih", ascending=False), use_container_width=True)
+                    if not kisi_log.empty
