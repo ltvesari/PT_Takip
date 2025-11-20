@@ -21,50 +21,40 @@ st.markdown("""
 def baglanti_kur():
     # Streamlit Secrets'tan anahtarı al
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    
-    # Secrets verisini sözlük formatına çevir
     creds_dict = dict(st.secrets["gcp_service_account"])
-    
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
-    
-    # Dosyayı aç (İsmi birebir aynı olmalı)
     sheet = client.open("PT_Takip_Sistemi")
     return sheet
 
-# --- VERİ ÇEKME / GÜNCELLEME ---
+# --- VERİ ÇEKME ---
 def veri_getir():
     try:
         sh = baglanti_kur()
         
-        # Öğrenciler Sayfası
         try:
             ws_ogrenci = sh.worksheet("Ogrenciler")
         except:
             ws_ogrenci = sh.add_worksheet(title="Ogrenciler", rows="100", cols="5")
             ws_ogrenci.append_row(["isim", "bakiye", "notlar", "durum", "son_guncelleme"])
 
-        # Loglar Sayfası
         try:
             ws_log = sh.worksheet("Loglar")
         except:
             ws_log = sh.add_worksheet(title="Loglar", rows="1000", cols="4")
             ws_log.append_row(["tarih", "ogrenci", "islem", "detay"])
 
-        # Ölçümler Sayfası
         try:
             ws_olcum = sh.worksheet("Olcumler")
         except:
             ws_olcum = sh.add_worksheet(title="Olcumler", rows="1000", cols="5")
             ws_olcum.append_row(["ogrenci", "tarih", "kilo", "yag", "bel"])
 
-        # Verileri DataFrame'e çevir
         df_students = pd.DataFrame(ws_ogrenci.get_all_records())
         df_logs = pd.DataFrame(ws_log.get_all_records())
         df_measure = pd.DataFrame(ws_olcum.get_all_records())
         
         return sh, df_students, df_logs, df_measure
-        
     except Exception as e:
         st.error(f"Bağlantı Hatası: {e}")
         return None, None, None, None
@@ -73,7 +63,7 @@ def veri_getir():
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
-    # Yan Menü
+    # YAN MENÜ
     with st.sidebar:
         st.title("💪 PT KONTROL")
         st.write("👤 **Levent Hoca**")
@@ -92,7 +82,6 @@ if sh:
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
         
         if not df_ogrenci.empty:
-            # Filtreleme
             mask = pd.Series([True] * len(df_ogrenci))
             if filtre == "Aktif": mask = mask & (df_ogrenci["durum"] == "active")
             if filtre == "Pasif": mask = mask & (df_ogrenci["durum"] == "passive")
@@ -110,20 +99,34 @@ if sh:
                         renk = "🟢" if bakiye >= 5 else "🟠" if bakiye > 0 else "🔴"
                         st.markdown(f"### {renk} {isim}")
                         st.metric("Kalan", bakiye)
-                        st.caption(row["notlar"] if row["notlar"] else "Normal")
                         
-                        if st.button("DÜŞ 📉", key=f"d_{idx}", type="primary"):
-                            # Google Sheets Güncelleme
+                        not_goster = row["notlar"] if row["notlar"] else "Normal"
+                        st.caption(f"📝 {not_goster}")
+                        
+                        # BUTONLAR (DÜŞ ve İPTAL YAN YANA)
+                        b1, b2 = st.columns(2)
+                        
+                        # --- DÜŞME BUTONU ---
+                        if b1.button("DÜŞ 📉", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler")
-                            # Excel'de satır numarası: DataFrame index + 2 (Başlık var)
                             gercek_satir = row.name + 2 
                             ws.update_cell(gercek_satir, 2, int(bakiye - 1))
-                            
-                            # Log Ekle
                             sh.worksheet("Loglar").append_row([
                                 datetime.now().strftime("%Y-%m-%d %H:%M"), isim, "Ders Yapıldı", ""
                             ])
-                            st.toast("Ders düşüldü!")
+                            st.toast(f"{isim}: Ders düşüldü!")
+                            time.sleep(1)
+                            st.rerun()
+                        
+                        # --- İPTAL (GERİ AL) BUTONU ---
+                        if b2.button("İPTAL ↩️", key=f"i_{idx}"):
+                            ws = sh.worksheet("Ogrenciler")
+                            gercek_satir = row.name + 2
+                            ws.update_cell(gercek_satir, 2, int(bakiye + 1))
+                            sh.worksheet("Loglar").append_row([
+                                datetime.now().strftime("%Y-%m-%d %H:%M"), isim, "Ders İptal/İade", "Hatalı işlem düzeltildi"
+                            ])
+                            st.toast(f"{isim}: İşlem geri alındı (+1 eklendi)")
                             time.sleep(1)
                             st.rerun()
 
@@ -140,14 +143,14 @@ if sh:
                 if st.form_submit_button("Kaydet"):
                     sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", str(datetime.now())])
                     st.success("Eklendi!")
+                    time.sleep(1)
                     st.rerun()
                     
         with t2:
             if not df_ogrenci.empty:
                 sec = st.selectbox("Seç", df_ogrenci["isim"].tolist())
-                # Seçilenin verisini bul
                 sec_veri = df_ogrenci[df_ogrenci["isim"] == sec].iloc[0]
-                sec_idx = sec_veri.name + 2 # Excel satırı
+                sec_idx = sec_veri.name + 2 
                 
                 c1, c2 = st.columns(2)
                 with c1:
@@ -156,7 +159,6 @@ if sh:
                         ws = sh.worksheet("Ogrenciler")
                         yeni_bakiye = int(sec_veri["bakiye"] + ek)
                         ws.update_cell(sec_idx, 2, yeni_bakiye)
-                        
                         sh.worksheet("Loglar").append_row([
                             datetime.now().strftime("%Y-%m-%d %H:%M"), sec, "Paket Yüklendi", f"{ek} ders"
                         ])
@@ -166,8 +168,19 @@ if sh:
                 st.divider()
                 st.write("📜 **Geçmiş**")
                 if not df_log.empty:
-                    kisi_log = df_log[df_log["ogrenci"] == sec]
-                    st.dataframe(kisi_log, use_container_width=True)
+                    # İlgili öğrencinin loglarını filtrele ve ters sırala (yeniden eskiye)
+                    kisi_log = df_log[df_log["ogrenci"] == sec].copy()
+                    if not kisi_log.empty:
+                        # Tarih sütununu datetime objesine çevirip sıralayalım
+                        try:
+                            kisi_log["tarih_dt"] = pd.to_datetime(kisi_log["tarih"], errors='coerce')
+                            kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
+                            # Tabloda göstermek için gereksiz sütunları atalım
+                            st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
+                        except:
+                            st.dataframe(kisi_log, use_container_width=True)
+                    else:
+                        st.info("Kayıt yok.")
 
     # === 3. ÖLÇÜMLER ===
     elif menu == "Vücut Ölçümleri":
