@@ -175,11 +175,12 @@ if sh:
                     else:
                         st.info("Kayıt yok.")
 
-    # === 3. ÖLÇÜMLER ===
+    # === 3. ÖLÇÜMLER (DÜZELTİLDİ) ===
     elif menu == "Vücut Ölçümleri":
         st.header("📏 Ölçümler")
         
-        o_sec = None  # <-- HATA KORUYUCU EKLENDİ
+        # HATA ÖNLEYİCİ: Değişkeni baştan boş olarak tanımlıyoruz
+        o_sec = None 
         
         if df_ogrenci.empty:
             st.warning("Henüz öğrenci listeniz boş. Önce öğrenci ekleyin.")
@@ -197,21 +198,24 @@ if sh:
                         st.success("Kaydedildi")
                         time.sleep(1)
                         st.rerun()
+            
+            # Grafik Kısmı
             with c2:
-                # Artık o_sec kontrolü yapılıyor, hata vermez
-                if o_sec and not df_measure.empty:
+                # Artık o_sec'in dolu olduğundan eminiz
+                if o_sec is not None and not df_measure.empty:
                     kisi_olcum = df_measure[df_measure["ogrenci"] == o_sec]
                     if not kisi_olcum.empty:
                         st.line_chart(kisi_olcum, x="tarih", y="kilo")
                         st.dataframe(kisi_olcum, use_container_width=True)
                     else:
                         st.info(f"{o_sec} için henüz ölçüm girilmemiş.")
+                else:
+                    st.info("Veri bekleniyor...")
 
     # === 4. RAPORLAR ===
     elif menu == "Raporlar":
         st.header("📊 Raporlar")
         if not df_log.empty:
-            # Tarih formatını düzelt
             df_log["tarih"] = pd.to_datetime(df_log["tarih"], errors='coerce')
             df_log["Ay"] = df_log["tarih"].dt.strftime("%Y-%m")
             
