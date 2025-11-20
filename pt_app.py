@@ -165,4 +165,57 @@ if sh:
                 st.write("📜 **Geçmiş**")
                 if not df_log.empty:
                     kisi_log = df_log[df_log["ogrenci"] == sec].copy()
-                    if not kisi_log.empty
+                    if not kisi_log.empty:
+                        try:
+                            kisi_log["tarih_dt"] = pd.to_datetime(kisi_log["tarih"], errors='coerce')
+                            kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
+                            st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
+                        except:
+                            st.dataframe(kisi_log, use_container_width=True)
+                    else:
+                        st.info("Kayıt yok.")
+
+    # === 3. ÖLÇÜMLER ===
+    elif menu == "Vücut Ölçümleri":
+        st.header("📏 Ölçümler")
+        
+        o_sec = None  # <-- HATA KORUYUCU EKLENDİ
+        
+        if df_ogrenci.empty:
+            st.warning("Henüz öğrenci listeniz boş. Önce öğrenci ekleyin.")
+        else:
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                o_sec = st.selectbox("Öğrenci", df_ogrenci["isim"].tolist())
+                with st.form("olcum"):
+                    trh = st.date_input("Tarih")
+                    kg = st.number_input("Kilo")
+                    yg = st.number_input("Yağ")
+                    bl = st.number_input("Bel")
+                    if st.form_submit_button("Kaydet"):
+                        sh.worksheet("Olcumler").append_row([o_sec, str(trh), kg, yg, bl])
+                        st.success("Kaydedildi")
+                        time.sleep(1)
+                        st.rerun()
+            with c2:
+                # Artık o_sec kontrolü yapılıyor, hata vermez
+                if o_sec and not df_measure.empty:
+                    kisi_olcum = df_measure[df_measure["ogrenci"] == o_sec]
+                    if not kisi_olcum.empty:
+                        st.line_chart(kisi_olcum, x="tarih", y="kilo")
+                        st.dataframe(kisi_olcum, use_container_width=True)
+                    else:
+                        st.info(f"{o_sec} için henüz ölçüm girilmemiş.")
+
+    # === 4. RAPORLAR ===
+    elif menu == "Raporlar":
+        st.header("📊 Raporlar")
+        if not df_log.empty:
+            # Tarih formatını düzelt
+            df_log["tarih"] = pd.to_datetime(df_log["tarih"], errors='coerce')
+            df_log["Ay"] = df_log["tarih"].dt.strftime("%Y-%m")
+            
+            dersler = df_log[df_log["islem"] == "Ders Yapıldı"]
+            
+            st.bar_chart(dersler["Ay"].value_counts())
+            st.dataframe(df_log.sort_values("tarih", ascending=False), use_container_width=True)
