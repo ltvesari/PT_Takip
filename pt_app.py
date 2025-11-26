@@ -8,20 +8,20 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT", layout="wide", page_icon="💪")
 
-# --- CSS İLE ZORLA KÜÇÜLTME ---
+# --- CSS İLE ZORLA KÜÇÜLTME (8'li Sıra İçin) ---
 st.markdown("""
 <style>
     /* 1. Sayfa Kenar Boşluklarını Yok Et */
     .block-container {
-        padding-top: 0.5rem;
+        padding-top: 1rem;
         padding-bottom: 0rem;
-        padding-left: 0.2rem;
-        padding-right: 0.2rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
     
-    /* 2. Sütunları ZORLA Yan Yana Tut (Telefonda alta inmesin) */
+    /* 2. Sütunları ZORLA Yan Yana Tut */
     div[data-testid="column"] {
-        flex: 1 0 auto !important; /* Esnek olsun ama küçülsün */
+        flex: 1 0 auto !important;
         min_width: 0px !important;
         width: 11% !important; /* Ekrana 9 tane sığması için %11 genişlik */
         padding: 0px 1px !important;
@@ -31,21 +31,21 @@ st.markdown("""
     .stButton button {
         width: 100%;
         padding: 0px !important;
-        font-size: 10px !important; /* Çok küçük font */
+        font-size: 10px !important;
         line-height: 1 !important;
-        height: 20px !important; /* Yükseklik az */
+        height: 20px !important;
         min-height: 0px !important;
         margin-top: 2px !important;
     }
     
     /* 4. İsimleri Küçült ama Tam Göster */
     .ogrenci-isim {
-        font-size: 10px; /* Okunabilecek en küçük sınır */
+        font-size: 10px;
         font-weight: bold;
         text-align: center;
         line-height: 1;
-        white-space: normal; /* Alt satıra geçebilsin */
-        height: 24px; /* İsim için sabit yer */
+        white-space: normal;
+        height: 24px;
         overflow: hidden;
         margin-bottom: 0px;
     }
@@ -71,12 +71,6 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         padding: 2px !important;
         border: 1px solid #ddd;
-    }
-    
-    /* Hata mesajı vs. çıkarsa yer kaplamasın */
-    div[data-testid="stToast"] {
-        width: 50% !important;
-        left: 25% !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -123,13 +117,18 @@ def veri_getir():
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
-    # Üst Menü (Yatay ve Küçük)
-    menu = st.radio("", ["Liste", "Yönetim", "Ölçüm", "Rapor"], horizontal=True, label_visibility="collapsed")
+    # YAN MENÜ (GERİ GELDİ)
+    with st.sidebar:
+        st.markdown("### 💪 PT KONTROL")
+        menu = st.radio("Menü", ["Liste", "Yönetim", "Ölçüm", "Rapor"])
+        if st.button("🔄 Yenile"):
+            st.cache_data.clear()
+            st.rerun()
 
-    # === 1. LİSTE (MİKRO MOD) ===
+    # === 1. LİSTE (MİKRO MOD - 8 SÜTUNLU) ===
     if menu == "Liste":
         # Arama
-        arama = st.text_input("", placeholder="Ara...", label_visibility="collapsed")
+        arama = st.text_input("", placeholder="Öğrenci Ara...", label_visibility="collapsed")
         
         # Son Dersler
         son_dersler = {}
@@ -160,17 +159,15 @@ if sh:
                         bakiye = row["bakiye"]
                         renk = "green" if bakiye >= 5 else "orange" if bakiye > 0 else "red"
                         
-                        # İSİM (Tam Hali, Küçük Font)
+                        # İSİM
                         st.markdown(f"<div class='ogrenci-isim'>{isim_tam}</div>", unsafe_allow_html=True)
-                        
-                        # BAKİYE (Biraz Büyük)
+                        # BAKİYE
                         st.markdown(f"<div class='ogrenci-bakiye' style='color:{renk}'>{bakiye}</div>", unsafe_allow_html=True)
-                        
-                        # SON TARİH (Minik)
+                        # TARİH
                         son_tarih = son_dersler.get(isim_tam, "-")
                         st.markdown(f"<div class='son-tarih'>{son_tarih}</div>", unsafe_allow_html=True)
                         
-                        # BUTONLAR (Eksi ve Artı)
+                        # BUTONLAR
                         if st.button("➖", key=f"d_{idx}"):
                             ws = sh.worksheet("Ogrenciler")
                             cell = ws.find(isim_tam)
