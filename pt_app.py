@@ -61,7 +61,6 @@ def veri_getir():
         return None, None, None, None
 
 # --- ANA PROGRAM ---
-# Değişken isimlerini burada eşitliyoruz
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
@@ -83,6 +82,25 @@ if sh:
         arama = c1.text_input("🔍 Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
         
+        # --- SON DERS TARİHLERİNİ HESAPLA ---
+        son_dersler = {}
+        if not df_log.empty:
+            # Tarihleri düzelt
+            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], errors='coerce')
+            # Sadece dersleri al
+            sadece_dersler = df_log[df_log["islem"] == "Ders Yapıldı"].copy()
+            # Tarihe göre tersten sırala (En yeni en üstte)
+            sadece_dersler = sadece_dersler.sort_values("tarih_dt", ascending=False)
+            
+            # Her öğrencinin ilk kaydını (en güncelini) al
+            for _, row_log in sadece_dersler.iterrows():
+                ogr_adi = row_log["ogrenci"]
+                if ogr_adi not in son_dersler:
+                    # Tarihi güzel formatta kaydet (Gün.Ay.Yıl)
+                    tarih_str = row_log["tarih_dt"].strftime("%d.%m.%Y")
+                    son_dersler[ogr_adi] = tarih_str
+        # ------------------------------------
+
         if not df_ogrenci.empty:
             mask = pd.Series([True] * len(df_ogrenci))
             if filtre == "Aktif": mask = mask & (df_ogrenci["durum"] == "active")
@@ -102,8 +120,14 @@ if sh:
                         st.markdown(f"### {renk} {isim}")
                         st.metric("Kalan", bakiye)
                         
+                        # Not Gösterimi
                         not_goster = row["notlar"] if row["notlar"] else "Normal"
                         st.caption(f"📝 {not_goster}")
+
+                        # --- SON DERS TARİHİ GÖSTERİMİ ---
+                        son_tarih = son_dersler.get(isim, "-")
+                        st.caption(f"📅 **Son Ders:** {son_tarih}")
+                        # ---------------------------------
                         
                         b1, b2 = st.columns(2)
                         if b1.button("DÜŞ 📉", key=f"d_{idx}", type="primary"):
@@ -177,7 +201,7 @@ if sh:
                     else:
                         st.info("Kayıt yok.")
 
-    # === 3. ÖLÇÜMLER (DÜZELTİLDİ) ===
+    # === 3. ÖLÇÜMLER ===
     elif menu == "Vücut Ölçümleri":
         st.header("📏 Ölçümler")
         
@@ -200,9 +224,7 @@ if sh:
                         time.sleep(1)
                         st.rerun()
             
-            # Grafik Kısmı
             with c2:
-                # DÜZELTME: Değişken ismi 'df_measure' yerine 'df_olcum' olarak düzeltildi
                 if o_sec is not None and not df_olcum.empty:
                     kisi_olcum = df_olcum[df_olcum["ogrenci"] == o_sec]
                     if not kisi_olcum.empty:
