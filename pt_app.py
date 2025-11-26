@@ -82,13 +82,18 @@ if sh:
         arama = c1.text_input("🔍 Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
         
-        # --- SON DERS TARİHLERİNİ HESAPLA ---
+        # --- SON DERS TARİHLERİNİ HESAPLA (DÜZELTİLDİ) ---
         son_dersler = {}
         if not df_log.empty:
-            # Tarihleri düzelt
+            # Tarihleri düzelt (Hatalı olanları 'NaT' yapar)
             df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], errors='coerce')
+            
             # Sadece dersleri al
             sadece_dersler = df_log[df_log["islem"] == "Ders Yapıldı"].copy()
+            
+            # 🛑 KRİTİK DÜZELTME: Tarihi bozuk olan satırları (NaT) çöpe at
+            sadece_dersler = sadece_dersler.dropna(subset=["tarih_dt"])
+            
             # Tarihe göre tersten sırala (En yeni en üstte)
             sadece_dersler = sadece_dersler.sort_values("tarih_dt", ascending=False)
             
