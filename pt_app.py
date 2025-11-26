@@ -8,39 +8,28 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT Levent Hoca", layout="wide", page_icon="💪")
 
-# --- MODERN PASTEL MAVİ TASARIM (CSS) ---
+# --- MODERN TASARIM VE PROGRESS BAR CSS ---
 st.markdown("""
 <style>
-    /* GENEL SAYFA ARKAPLANI */
-    .stApp {
-        background-color: #F4F7F6; /* Çok açık gri-mavi */
-    }
-
-    /* SIDEBAR (YAN MENÜ) */
-    [data-testid="stSidebar"] {
-        background-color: #2C3E50; /* Koyu Lacivert */
-    }
-    [data-testid="stSidebar"] * {
-        color: #ecf0f1 !important; /* Sidebar yazıları açık renk */
-    }
+    /* GENEL */
+    .stApp { background-color: #F4F7F6; }
+    [data-testid="stSidebar"] { background-color: #2C3E50; }
+    [data-testid="stSidebar"] * { color: #ecf0f1 !important; }
 
     /* KART YAPISI */
-    div[data-testid="column"] {
-        padding: 5px !important;
-    }
-    
+    div[data-testid="column"] { padding: 5px !important; }
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         background-color: white;
         border-radius: 12px;
         border: none;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* Hafif gölge */
-        padding: 0px !important; /* İç boşluğu sıfırla (Header için) */
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        padding: 0px !important;
         overflow: hidden;
     }
 
-    /* KART BAŞLIĞI (İSİM ALANI) */
+    /* KART BAŞLIĞI */
     .card-header {
-        background-color: #3498DB; /* Pastel Mavi */
+        background-color: #3498DB;
         color: white;
         padding: 10px;
         text-align: center;
@@ -50,34 +39,32 @@ st.markdown("""
         border-top-right-radius: 12px;
     }
     
-    /* BAKİYE ALANI */
-    .stat-box {
-        padding: 15px 10px 5px 10px;
-        text-align: center;
+    /* BAKİYE */
+    .stat-box { padding: 15px 10px 0px 10px; text-align: center; }
+    .stat-number { font-size: 32px; font-weight: 800; color: #2C3E50; line-height: 1; }
+    .stat-label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* PROGRESS BAR KUTUSU */
+    .progress-container {
+        width: 80%;
+        background-color: #e0e0e0;
+        border-radius: 10px;
+        margin: 10px auto; /* Ortala */
+        height: 8px;
     }
-    .stat-number {
-        font-size: 32px;
-        font-weight: 800;
-        color: #2C3E50;
-        line-height: 1;
-    }
-    .stat-label {
-        font-size: 12px;
-        color: #7f8c8d;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+    /* PROGRESS BAR DOLULUK */
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.5s ease-in-out;
     }
 
-    /* SON DERS TARİHİ */
+    /* SON DERS */
     .last-date {
         font-size: 11px;
         color: #95a5a6;
         text-align: center;
         margin-bottom: 15px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
     }
 
     /* BUTONLAR */
@@ -88,37 +75,12 @@ st.markdown("""
         font-size: 12px;
         padding: 0.5rem 1rem;
         border: none;
-        transition: all 0.2s;
     }
-
-    /* DÜŞ BUTONU (KIRMIZI) */
-    button[kind="primary"] {
-        background-color: #E74C3C !important; /* Pastel Kırmızı */
-        color: white !important;
-    }
-    button[kind="primary"]:hover {
-        background-color: #c0392b !important;
-    }
-
-    /* İPTAL BUTONU (GRİ) */
-    button[kind="secondary"] {
-        background-color: #BDC3C7 !important; /* Pastel Gri */
-        color: #2C3E50 !important;
-    }
-    button[kind="secondary"]:hover {
-        background-color: #95a5a6 !important;
-    }
+    button[kind="primary"] { background-color: #E74C3C !important; color: white !important; }
+    button[kind="secondary"] { background-color: #BDC3C7 !important; color: #2C3E50 !important; }
     
     /* NOTLAR */
-    .notes {
-        font-size: 11px;
-        color: #e67e22; /* Turuncu uyarı */
-        text-align: center;
-        margin-top: -10px;
-        margin-bottom: 10px;
-        font-style: italic;
-    }
-
+    .notes { font-size: 11px; color: #e67e22; text-align: center; margin-bottom: 5px; font-style: italic; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -138,6 +100,23 @@ def tarihleri_zorla_cevir(df, kolon_adi):
     if df["tarih_dt"].isnull().all():
          df["tarih_dt"] = pd.to_datetime(df[kolon_adi], errors='coerce')
     return df
+
+# --- PROGRESS BAR HTML OLUŞTURUCU ---
+def progress_bar_yap(bakiye):
+    # Maksimum paket boyutunu 20 varsayalım (görsel doluluk için)
+    yuzde = min(bakiye * 5, 100) # 20 ders = %100
+    
+    # Renk Belirleme
+    if bakiye <= 3: renk = "#e74c3c" # Kırmızı (Kritik)
+    elif bakiye <= 7: renk = "#f39c12" # Turuncu (Azalıyor)
+    else: renk = "#2ecc71" # Yeşil (İyi)
+    
+    html = f"""
+    <div class="progress-container">
+        <div class="progress-fill" style="width: {yuzde}%; background-color: {renk};"></div>
+    </div>
+    """
+    return html
 
 # --- VERİ ÇEKME ---
 def veri_getir():
@@ -180,7 +159,7 @@ if sh:
         arama = c1.text_input("🔍 İsim Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
         
-        # Son Dersleri Hesapla
+        # Son Dersler
         son_dersler = {}
         if not df_log.empty:
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
@@ -205,7 +184,6 @@ if sh:
                 col = cols[idx % 4]
                 with col:
                     with st.container(border=True):
-                        # --- ÖZEL HTML KART TASARIMI ---
                         isim = row["isim"]
                         bakiye = row["bakiye"]
                         son_tarih = son_dersler.get(isim, "-")
@@ -213,15 +191,18 @@ if sh:
                         # 1. MAVİ BAŞLIK
                         st.markdown(f"<div class='card-header'>{isim}</div>", unsafe_allow_html=True)
                         
-                        # 2. BAKİYE
+                        # 2. BAKİYE VE PROGRESS BAR
                         st.markdown(f"""
                         <div class='stat-box'>
-                            <div class='stat-label'>KALAN DERS</div>
+                            <div class='stat-label'>KALAN</div>
                             <div class='stat-number'>{bakiye}</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # 3. NOTLAR (Varsa)
+                        # Progress Bar Ekleme
+                        st.markdown(progress_bar_yap(bakiye), unsafe_allow_html=True)
+                        
+                        # 3. NOTLAR
                         if row["notlar"] and row["notlar"] != "nan":
                             st.markdown(f"<div class='notes'>⚠️ {row['notlar']}</div>", unsafe_allow_html=True)
 
@@ -230,7 +211,6 @@ if sh:
                         
                         # 5. BUTONLAR
                         b1, b2 = st.columns(2)
-                        
                         if b1.button("DÜŞ 📉", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler")
                             cell = ws.find(isim)
