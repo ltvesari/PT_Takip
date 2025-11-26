@@ -73,30 +73,31 @@ if sh:
         arama = c1.text_input("🔍 Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
         
-        # --- SON DERS TARİHLERİ (AKILLI MOD) ---
+        # --- SON DERS TARİHLERİNİ BULMA (AKILLI SIRALAMA) ---
         son_dersler = {}
         if not df_log.empty:
-            # İşlem adını temizle
+            # 1. İşlem sütununu temizle
             df_log["islem"] = df_log["islem"].str.strip()
             
-            # 1. Pandas'ın otomatik tarih algılayıcısını kullan (mixed=True karışık formatları çözer)
-            # errors='coerce' demek: Anlayamadığın saçma bir şey varsa hata verme, boş geç (NaT).
-            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], errors='coerce')
+            # 2. Tarihleri "Akıllı Çevirici" ile zamana çevir
+            # dayfirst=True -> 26.11.2025'i doğru anlar
+            # errors='coerce' -> Anlayamadığını boş geçer
+            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], dayfirst=True, errors='coerce')
             
-            # 2. Tarihi anlaşılamayan satırları yoksay
-            df_log = df_log.dropna(subset=["tarih_dt"])
+            # 3. Tarihi bozuk olanları (NaT) temizle
+            gecerli_loglar = df_log.dropna(subset=["tarih_dt"])
 
-            # 3. Sadece 'Ders Yapıldı' olanları al
-            sadece_dersler = df_log[df_log["islem"] == "Ders Yapıldı"].copy()
+            # 4. Sadece 'Ders Yapıldı' olanları al
+            sadece_dersler = gecerli_loglar[gecerli_loglar["islem"] == "Ders Yapıldı"].copy()
             
-            # 4. En yeniden en eskiye sırala
-            sadece_dersler = sadece_dersler.sort_values("tarih_dt", ascending=False)
+            # 5. EN ÖNEMLİ KISIM: Zamana göre sırala (En büyük/yeni tarih en üste)
+            sadece_dersler = sadece_dersler.sort_values(by="tarih_dt", ascending=False)
             
-            # 5. Her öğrencinin en üstteki (en yeni) dersini kaydet
+            # 6. Her öğrenci için ilk sırada geleni (yani en yenisini) kaydet
             for _, row_log in sadece_dersler.iterrows():
                 ogr_adi = row_log["ogrenci"]
                 if ogr_adi not in son_dersler:
-                    # Ekranda Gün.Ay.Yıl olarak göster
+                    # Gösterirken sadece Gün.Ay.Yıl göster (Daha sade durur)
                     son_dersler[ogr_adi] = row_log["tarih_dt"].strftime("%d.%m.%Y")
         # ---------------------------------------------
 
@@ -132,7 +133,7 @@ if sh:
                             cell = ws.find(isim)
                             if cell:
                                 ws.update_cell(cell.row, 2, int(bakiye - 1))
-                                # YENİ KAYITLAR HER ZAMAN SAATLİ VE DÜZGÜN OLSUN
+                                # YENİ KAYITLARI "Yıl-Ay-Gün Saat:Dakika" formatında atıyoruz
                                 zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
                                 sh.worksheet("Loglar").append_row([zaman, isim, "Ders Yapıldı", ""])
                                 st.toast(f"{isim}: Ders düşüldü!")
@@ -189,12 +190,10 @@ if sh:
                 st.divider()
                 st.write("📜 **Ders Geçmişi**")
                 if not df_log.empty:
-                    # Burada da akıllı tarih çevirici kullanıyoruz
                     df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], errors='coerce')
                     kisi_log = df_log[df_log["ogrenci"] == sec].copy()
                     
                     if not kisi_log.empty:
-                        # Tarihe göre sırala (NaT olanlar en sona gider)
                         kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
                         st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
                     else:
@@ -234,8 +233,7 @@ if sh:
     elif menu == "Raporlar":
         st.header("📊 Raporlar")
         if not df_log.empty:
-            # Akıllı tarih çevirici raporlarda da devrede
-            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], errors='coerce')
+            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], dayfirst=True, errors='coerce')
             df_log = df_log.dropna(subset=["tarih_dt"])
             df_log["Ay"] = df_log["tarih_dt"].dt.strftime("%Y-%m")
             
