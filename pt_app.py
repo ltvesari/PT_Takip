@@ -8,15 +8,12 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT Levent Hoca", layout="wide", page_icon="💪")
 
-# --- CSS TASARIM (FİŞ EKLENDİ) ---
+# --- TASARIM CSS ---
 st.markdown("""
 <style>
-    /* GENEL */
     .stApp { background-color: #F4F7F6; }
     [data-testid="stSidebar"] { background-color: #2C3E50; }
     [data-testid="stSidebar"] * { color: #ecf0f1 !important; }
-
-    /* KART YAPISI */
     div[data-testid="column"] { padding: 5px !important; }
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         background-color: white;
@@ -26,73 +23,32 @@ st.markdown("""
         padding: 0px !important;
         overflow: hidden;
     }
-
-    /* KART BAŞLIĞI */
     .card-header {
-        background-color: #3498DB;
-        color: white;
-        padding: 10px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 14px;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
+        background-color: #3498DB; color: white; padding: 10px;
+        text-align: center; font-weight: bold; font-size: 14px;
     }
-    
-    /* BAKİYE */
-    .stat-box { padding: 10px 10px 0px 10px; text-align: center; }
-    .stat-number { font-size: 28px; font-weight: 800; color: #2C3E50; line-height: 1; }
-    .stat-label { font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
-
-    /* PROGRESS BAR */
-    .progress-container { width: 80%; background-color: #e0e0e0; border-radius: 10px; margin: 8px auto; height: 6px; }
+    .stat-box { padding: 15px 10px 5px 10px; text-align: center; }
+    .stat-number { font-size: 32px; font-weight: 800; color: #2C3E50; line-height: 1; }
+    .stat-label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+    .progress-container { width: 80%; background-color: #e0e0e0; border-radius: 10px; margin: 10px auto; height: 8px; }
     .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s; }
-
-    /* DERS FİŞİ (TICKET) TASARIMI 🎫 */
+    .last-date { font-size: 11px; color: #95a5a6; text-align: center; margin-bottom: 15px; }
+    .stButton button { width: 100%; border-radius: 6px; font-weight: 600; font-size: 12px; padding: 0.5rem 1rem; border: none; }
+    button[kind="primary"] { background-color: #E74C3C !important; color: white !important; }
+    button[kind="secondary"] { background-color: #BDC3C7 !important; color: #2C3E50 !important; }
+    .notes { font-size: 11px; color: #e67e22; text-align: center; margin-top: -10px; margin-bottom: 10px; font-style: italic; }
+    
+    /* FİŞ TASARIMI */
     .ticket-wrapper {
         background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
-        border: 2px dashed #3498DB;
-        border-radius: 15px;
-        padding: 20px;
-        width: 100%;
-        max-width: 350px;
-        margin: 0 auto 20px auto;
-        text-align: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        position: relative;
+        border: 2px dashed #3498DB; border-radius: 15px; padding: 20px;
+        width: 100%; max-width: 350px; margin: 0 auto 20px auto;
+        text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-    .ticket-title { font-size: 12px; letter-spacing: 2px; color: #95a5a6; text-transform: uppercase; margin-bottom: 10px; }
     .ticket-name { font-size: 24px; font-weight: 900; color: #2C3E50; margin-bottom: 5px; }
     .ticket-date { font-size: 14px; color: #7f8c8d; margin-bottom: 20px; font-style: italic; }
-    .ticket-balance-box { 
-        background-color: #3498DB; 
-        color: white; 
-        padding: 15px; 
-        border-radius: 10px; 
-        margin-bottom: 15px; 
-    }
+    .ticket-balance-box { background-color: #3498DB; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
     .ticket-balance-num { font-size: 42px; font-weight: 800; line-height: 1; }
-    .ticket-balance-lbl { font-size: 12px; opacity: 0.9; }
-    .ticket-footer { font-size: 10px; color: #bdc3c7; margin-top: 10px; }
-    
-    /* BUTONLAR */
-    .stButton button {
-        width: 100%;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 11px;
-        padding: 0.4rem 0.1rem;
-        border: none;
-    }
-    /* Renkler */
-    button[kind="primary"] { background-color: #E74C3C !important; color: white !important; } /* Düş - Kırmızı */
-    button[kind="secondary"] { background-color: #BDC3C7 !important; color: #2C3E50 !important; } /* İptal - Gri */
-    /* Fiş Butonu İçin Özel Stil (Normal buton gibi davranır ama biz ona mavi dedik) */
-    
-    /* NOTLAR */
-    .notes { font-size: 10px; color: #e67e22; text-align: center; margin-bottom: 5px; font-style: italic; }
-    .last-date { font-size: 10px; color: #95a5a6; text-align: center; margin-bottom: 10px; }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -158,38 +114,30 @@ if sh:
 
     # === 1. ANA EKRAN ===
     if menu == "Ana Ekran":
-        
-        # --- FİŞ GÖSTERİM ALANI (SCREENSHOT MODU) ---
+        # FİŞ GÖSTERİMİ
         if st.session_state["fis_goster"]:
             kisi = st.session_state["fis_goster"]
-            # Kişinin bilgilerini bul
             kisi_row = df_ogrenci[df_ogrenci["isim"] == kisi["isim"]].iloc[0]
             
             st.markdown("---")
-            c_fis, c_kapat = st.columns([4, 1])
+            c_kapat = st.columns([4, 1])[1]
             c_kapat.button("X Kapat", on_click=lambda: st.session_state.update({"fis_goster": None}))
             
-            bugun_tarih = datetime.now().strftime("%d.%m.%Y")
-            
-            # ŞIK FİŞ HTML
             st.markdown(f"""
             <div class="ticket-wrapper">
-                <div class="ticket-title">PT LEVENT HOCA • DERS DURUMU</div>
+                <div style="font-size:12px; letter-spacing:2px; color:#95a5a6; margin-bottom:10px;">PT LEVENT HOCA</div>
                 <div class="ticket-name">{kisi['isim']}</div>
-                <div class="ticket-date">📅 {bugun_tarih}</div>
+                <div class="ticket-date">📅 {datetime.now().strftime("%d.%m.%Y")}</div>
                 <div class="ticket-balance-box">
                     <div class="ticket-balance-num">{kisi_row['bakiye']}</div>
-                    <div class="ticket-balance-lbl">KALAN DERS HAKKI</div>
+                    <div style="font-size:12px;">KALAN DERS</div>
                 </div>
-                <div class="ticket-footer">Spor, sağlık ve disiplin.<br>İyi antrenmanlar! 💪</div>
+                <div style="font-size:10px; color:#bdc3c7;">İyi antrenmanlar! 💪</div>
             </div>
             """, unsafe_allow_html=True)
-            st.info("👆 Bu alanı ekran görüntüsü alıp gönderebilirsin.")
             st.markdown("---")
-        # --------------------------------------------
 
         st.markdown("### 📋 Öğrenci Listesi")
-        
         c1, c2 = st.columns([3, 1])
         arama = c1.text_input("🔍 İsim Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
@@ -222,49 +170,23 @@ if sh:
                         son_tarih = son_dersler.get(isim, "-")
                         
                         st.markdown(f"<div class='card-header'>{isim}</div>", unsafe_allow_html=True)
-                        
-                        st.markdown(f"""
-                        <div class='stat-box'>
-                            <div class='stat-label'>KALAN</div>
-                            <div class='stat-number'>{bakiye}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f"<div class='stat-box'><div class='stat-label'>KALAN</div><div class='stat-number'>{bakiye}</div></div>", unsafe_allow_html=True)
                         st.markdown(progress_bar_yap(bakiye), unsafe_allow_html=True)
-                        
                         if row["notlar"] and row["notlar"] != "nan":
                             st.markdown(f"<div class='notes'>⚠️ {row['notlar']}</div>", unsafe_allow_html=True)
-
                         st.markdown(f"<div class='last-date'>📅 Son: {son_tarih}</div>", unsafe_allow_html=True)
                         
-                        # 3'LÜ BUTON GRUBU (DÜŞ | FİŞ | İPTAL)
                         b1, b2, b3 = st.columns([1, 1, 1])
-                        
-                        # DÜŞ
                         if b1.button("DÜŞ", key=f"d_{idx}", type="primary"):
-                            ws = sh.worksheet("Ogrenciler")
-                            cell = ws.find(isim)
-                            ws.update_cell(cell.row, 2, int(bakiye - 1))
-                            zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                            sh.worksheet("Loglar").append_row([zaman, isim, "Ders Yapıldı", ""])
-                            st.toast(f"{isim}: Ders düşüldü!")
-                            time.sleep(0.5)
-                            st.rerun()
-                        
-                        # FİŞ (DURUM) - Mavi renkte olsun diye secondary kullanıp CSS ile halledebilirdik ama karışmasın diye şimdilik secondary
-                        if b2.button("🎫", key=f"f_{idx}", help="Durum Fişi Oluştur"):
-                            st.session_state["fis_goster"] = {"isim": isim}
-                            st.rerun()
-
-                        # İPTAL
+                            ws = sh.worksheet("Ogrenciler"); cell = ws.find(isim); ws.update_cell(cell.row, 2, int(bakiye - 1))
+                            sh.worksheet("Loglar").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), isim, "Ders Yapıldı", ""])
+                            st.toast(f"{isim}: Düşüldü"); time.sleep(0.5); st.rerun()
+                        if b2.button("🎫", key=f"f_{idx}"):
+                            st.session_state["fis_goster"] = {"isim": isim}; st.rerun()
                         if b3.button("İPTAL", key=f"i_{idx}", type="secondary"):
-                            ws = sh.worksheet("Ogrenciler")
-                            cell = ws.find(isim)
-                            ws.update_cell(cell.row, 2, int(bakiye + 1))
-                            zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                            sh.worksheet("Loglar").append_row([zaman, isim, "Ders İptal/İade", "Düzeltme"])
-                            st.toast("Geri alındı.")
-                            time.sleep(0.5)
-                            st.rerun()
+                            ws = sh.worksheet("Ogrenciler"); cell = ws.find(isim); ws.update_cell(cell.row, 2, int(bakiye + 1))
+                            sh.worksheet("Loglar").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), isim, "Ders İptal/İade", "Düzeltme"])
+                            st.toast("Geri alındı"); time.sleep(0.5); st.rerun()
 
     # === 2. ÖĞRENCİ YÖNETİMİ ===
     elif menu == "Öğrenci Ekle/Düzenle":
@@ -277,11 +199,8 @@ if sh:
                 nt = st.text_area("Notlar")
                 dt_input = st.date_input("Doğum Tarihi", value=None, min_value=datetime(1950,1,1))
                 if st.form_submit_button("Kaydet"):
-                    zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    dt_str = dt_input.strftime("%Y-%m-%d") if dt_input else ""
-                    sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", zaman, dt_str])
-                    st.success("Kaydedildi")
-                    st.rerun()
+                    sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", datetime.now().strftime("%Y-%m-%d"), dt_input.strftime("%Y-%m-%d") if dt_input else ""])
+                    st.success("Kaydedildi"); st.rerun()
         with t2:
             if not df_ogrenci.empty:
                 sec = st.selectbox("Seç", df_ogrenci["isim"].tolist())
@@ -290,21 +209,14 @@ if sh:
                 with c1:
                     ek = st.number_input("Ekle", value=10)
                     if st.button("Yükle"):
-                        ws = sh.worksheet("Ogrenciler")
-                        cell = ws.find(sec)
-                        ws.update_cell(cell.row, 2, int(sec_veri["bakiye"] + ek))
-                        zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                        sh.worksheet("Loglar").append_row([zaman, sec, "Paket Yüklendi", f"{ek} ders"])
-                        st.success("Yüklendi")
-                        st.rerun()
+                        ws = sh.worksheet("Ogrenciler"); cell = ws.find(sec); ws.update_cell(cell.row, 2, int(sec_veri["bakiye"] + ek))
+                        sh.worksheet("Loglar").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), sec, "Paket Yüklendi", f"{ek} ders"])
+                        st.success("Yüklendi"); st.rerun()
                 with c2:
                     yeni_not = st.text_area("Not", value=sec_veri.get("notlar", ""))
                     if st.button("Güncelle"):
-                        ws = sh.worksheet("Ogrenciler")
-                        cell = ws.find(sec)
-                        ws.update_cell(cell.row, 3, yeni_not)
-                        st.success("Güncellendi")
-                        st.rerun()
+                        ws = sh.worksheet("Ogrenciler"); cell = ws.find(sec); ws.update_cell(cell.row, 3, yeni_not)
+                        st.success("Güncellendi"); st.rerun()
 
     # === 3. ÖLÇÜMLER ===
     elif menu == "Vücut Ölçümleri":
@@ -313,25 +225,45 @@ if sh:
         if not df_ogrenci.empty:
             o_sec = st.selectbox("Öğrenci", df_ogrenci["isim"].tolist())
             with st.form("olcum"):
-                c1, c2 = st.columns(2)
-                kg = c1.number_input("Kilo")
-                yg = c2.number_input("Yağ")
-                bl = st.number_input("Bel")
+                c1, c2 = st.columns(2); kg = c1.number_input("Kilo"); yg = c2.number_input("Yağ"); bl = st.number_input("Bel")
                 if st.form_submit_button("Kaydet"):
-                    trh_str = datetime.now().strftime("%Y-%m-%d")
-                    sh.worksheet("Olcumler").append_row([o_sec, trh_str, kg, yg, bl])
-                    st.success("Kaydedildi")
-                    st.rerun()
+                    sh.worksheet("Olcumler").append_row([o_sec, datetime.now().strftime("%Y-%m-%d"), kg, yg, bl])
+                    st.success("Kaydedildi"); st.rerun()
             if o_sec and not df_olcum.empty:
                 kisi_olcum = df_olcum[df_olcum["ogrenci"] == o_sec].copy()
                 if not kisi_olcum.empty:
                     kisi_olcum["kilo"] = pd.to_numeric(kisi_olcum["kilo"], errors='coerce')
                     st.line_chart(kisi_olcum, x="tarih", y="kilo")
 
-    # === 4. RAPORLAR ===
+    # === 4. RAPORLAR (GRAFİK GERİ GELDİ) ===
     elif menu == "Raporlar":
         st.header("📊 Raporlar")
         if not df_log.empty:
+            # Tarihleri düzelt
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
+            df_log = df_log.dropna(subset=["tarih_dt"])
+            df_log["Ay"] = df_log["tarih_dt"].dt.strftime("%Y-%m")
+            
+            # Sadece dersleri filtrele
+            dersler = df_log[df_log["islem"].str.strip() == "Ders Yapıldı"]
+            
+            # --- 1. GRAFİK ---
+            st.subheader("Aylık Ders Yoğunluğu")
+            if not dersler.empty:
+                st.bar_chart(dersler["Ay"].value_counts().sort_index())
+                
+                # İstatistikler
+                bu_ay = datetime.now().strftime("%Y-%m")
+                bu_ay_ders = len(dersler[dersler["Ay"] == bu_ay])
+                toplam_ders = len(dersler)
+                c1, c2 = st.columns(2)
+                c1.metric("Bu Ay Yapılan Ders", bu_ay_ders)
+                c2.metric("Toplam Yapılan Ders", toplam_ders)
+            else:
+                st.info("Henüz ders kaydı yok.")
+            
+            st.divider()
+            # --- 2. TABLO ---
+            st.subheader("Tüm İşlem Geçmişi")
             df_sirali = df_log.sort_values("tarih_dt", ascending=False)
             st.dataframe(df_sirali[["tarih", "ogrenci", "islem"]], use_container_width=True)
