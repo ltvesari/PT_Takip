@@ -8,58 +8,75 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT", layout="wide", page_icon="💪")
 
-# --- MOBİL DOSTU CSS TASARIM ---
+# --- CSS İLE ZORLA KÜÇÜLTME ---
 st.markdown("""
 <style>
-    /* Genel sayfa kenar boşluklarını azalt */
+    /* 1. Sayfa Kenar Boşluklarını Yok Et */
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0rem;
+        padding-left: 0.2rem;
+        padding-right: 0.2rem;
     }
     
-    /* Butonları küçült ve incelt */
+    /* 2. Sütunları ZORLA Yan Yana Tut (Telefonda alta inmesin) */
+    div[data-testid="column"] {
+        flex: 1 0 auto !important; /* Esnek olsun ama küçülsün */
+        min_width: 0px !important;
+        width: 11% !important; /* Ekrana 9 tane sığması için %11 genişlik */
+        padding: 0px 1px !important;
+    }
+    
+    /* 3. Butonları İyice Küçült */
     .stButton button {
         width: 100%;
-        border-radius: 5px;
-        font-weight: bold;
-        font-size: 14px !important;
-        padding: 0.2rem 0.5rem !important;
-        height: auto !important;
-        min-height: 0px !important;
-    }
-    
-    /* Kartların içindeki boşlukları al */
-    div[data-testid="column"] {
         padding: 0px !important;
+        font-size: 10px !important; /* Çok küçük font */
+        line-height: 1 !important;
+        height: 20px !important; /* Yükseklik az */
+        min-height: 0px !important;
+        margin-top: 2px !important;
     }
     
-    /* İsim ve Rakamların boyutunu ayarla */
-    h3 {
-        font-size: 18px !important;
-        margin-bottom: 0px !important;
-        padding-bottom: 0px !important;
+    /* 4. İsimleri Küçült ama Tam Göster */
+    .ogrenci-isim {
+        font-size: 10px; /* Okunabilecek en küçük sınır */
+        font-weight: bold;
+        text-align: center;
+        line-height: 1;
+        white-space: normal; /* Alt satıra geçebilsin */
+        height: 24px; /* İsim için sabit yer */
+        overflow: hidden;
+        margin-bottom: 0px;
     }
     
-    /* Metrik (Kalan Ders) yazısını küçült */
-    div[data-testid="stMetricValue"] {
-        font-size: 24px !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        font-size: 12px !important;
+    /* 5. Bakiyeyi Küçült */
+    .ogrenci-bakiye {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        margin: 0px;
+        line-height: 1;
     }
     
-    /* Kartın kendisi */
+    /* 6. Son Tarihi Küçült */
+    .son-tarih {
+        font-size: 8px;
+        color: grey;
+        text-align: center;
+        margin-bottom: 2px;
+    }
+
+    /* 7. Kutunun Çerçevesini İncelt */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        padding: 10px !important;
-        margin-bottom: 5px !important;
+        padding: 2px !important;
+        border: 1px solid #ddd;
     }
     
-    /* Küçük notlar */
-    .small-text {
-        font-size: 12px;
-        color: gray;
+    /* Hata mesajı vs. çıkarsa yer kaplamasın */
+    div[data-testid="stToast"] {
+        width: 50% !important;
+        left: 25% !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -73,7 +90,7 @@ def baglanti_kur():
     sheet = client.open("PT_Takip_Sistemi")
     return sheet
 
-# --- ÖZEL TARİH ÇEVİRİCİ ---
+# --- TARİH DÜZELTİCİ ---
 def tarihleri_zorla_cevir(df, kolon_adi):
     df[kolon_adi] = df[kolon_adi].astype(str).str.strip()
     df["tarih_dt"] = pd.to_datetime(df[kolon_adi], dayfirst=True, format="mixed", errors='coerce')
@@ -106,22 +123,15 @@ def veri_getir():
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
-    # YAN MENÜ
-    with st.sidebar:
-        st.write("👤 **Levent Hoca**")
-        menu = st.radio("Menü", ["Ana Ekran", "Yönetim", "Ölçümler", "Rapor"])
-        if st.button("🔄 Yenile"):
-            st.cache_data.clear()
-            st.rerun()
+    # Üst Menü (Yatay ve Küçük)
+    menu = st.radio("", ["Liste", "Yönetim", "Ölçüm", "Rapor"], horizontal=True, label_visibility="collapsed")
 
-    # === 1. ANA EKRAN (KOMPAKT) ===
-    if menu == "Ana Ekran":
-        # Arama ve Filtre yan yana ve sıkışık
-        c1, c2 = st.columns([2, 1])
-        arama = c1.text_input("🔍", placeholder="Öğrenci Ara")
-        filtre = c2.selectbox("", ["Aktif", "Pasif", "Tümü"], label_visibility="collapsed")
+    # === 1. LİSTE (MİKRO MOD) ===
+    if menu == "Liste":
+        # Arama
+        arama = st.text_input("", placeholder="Ara...", label_visibility="collapsed")
         
-        # Son Dersleri Bul
+        # Son Dersler
         son_dersler = {}
         if not df_log.empty:
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
@@ -129,61 +139,53 @@ if sh:
             sadece_dersler = sadece_dersler.sort_values(by="tarih_dt", ascending=False)
             for _, row_log in sadece_dersler.iterrows():
                 if row_log["ogrenci"] not in son_dersler:
-                    son_dersler[row_log["ogrenci"]] = row_log["tarih_dt"].strftime("%d.%m") # Sadece Gün.Ay
+                    son_dersler[row_log["ogrenci"]] = row_log["tarih_dt"].strftime("%d.%m")
 
         if not df_ogrenci.empty:
-            mask = pd.Series([True] * len(df_ogrenci))
-            if filtre == "Aktif": mask = mask & (df_ogrenci["durum"] == "active")
-            if filtre == "Pasif": mask = mask & (df_ogrenci["durum"] == "passive")
-            if arama: mask = mask & (df_ogrenci["isim"].str.contains(arama, case=False))
+            # Filtreleme
+            df_aktif = df_ogrenci[df_ogrenci["durum"] == "active"]
+            if arama:
+                df_aktif = df_aktif[df_aktif["isim"].str.contains(arama, case=False)]
             
-            filtrelenmis = df_ogrenci[mask]
+            # 8 SÜTUNLU IZGARA
+            SUTUN_SAYISI = 8 
+            cols = st.columns(SUTUN_SAYISI)
             
-            # 2 Sütunlu Grid (Telefonda daha iyi görünür)
-            cols = st.columns(2)
-            
-            for idx, row in filtrelenmis.iterrows():
-                col = cols[idx % 2] # 2 Sütunlu döngü
-                with col:
+            for idx, row in df_aktif.iterrows():
+                col_index = idx % SUTUN_SAYISI
+                
+                with cols[col_index]:
                     with st.container(border=True):
-                        # İsim ve Bakiye Yan Yana
+                        isim_tam = row["isim"]
                         bakiye = row["bakiye"]
-                        isim = row["isim"].split(" ")[0] + " " + (row["isim"].split(" ")[1][0] + "." if len(row["isim"].split(" ")) > 1 else "")
-                        # Uzun isimleri kısalt: Levent Hoca -> Levent H.
+                        renk = "green" if bakiye >= 5 else "orange" if bakiye > 0 else "red"
                         
-                        renk = "🟢" if bakiye >= 5 else "🟠" if bakiye > 0 else "🔴"
+                        # İSİM (Tam Hali, Küçük Font)
+                        st.markdown(f"<div class='ogrenci-isim'>{isim_tam}</div>", unsafe_allow_html=True)
                         
-                        # Üst Bilgi (İsim ve Kalan)
-                        st.markdown(f"**{renk} {isim}**")
-                        st.markdown(f"<h3 style='text-align:center; color:#333;'>{bakiye}</h3>", unsafe_allow_html=True)
+                        # BAKİYE (Biraz Büyük)
+                        st.markdown(f"<div class='ogrenci-bakiye' style='color:{renk}'>{bakiye}</div>", unsafe_allow_html=True)
                         
-                        # Alt Bilgi (Son Ders)
-                        son_tarih = son_dersler.get(row["isim"], "-")
-                        st.markdown(f"<p class='small-text' style='text-align:center; margin:0;'>📅 {son_tarih}</p>", unsafe_allow_html=True)
+                        # SON TARİH (Minik)
+                        son_tarih = son_dersler.get(isim_tam, "-")
+                        st.markdown(f"<div class='son-tarih'>{son_tarih}</div>", unsafe_allow_html=True)
                         
-                        # Butonlar Yan Yana (Küçük)
-                        b1, b2 = st.columns(2)
-                        if b1.button("DÜŞ", key=f"d_{idx}", type="primary"):
+                        # BUTONLAR (Eksi ve Artı)
+                        if st.button("➖", key=f"d_{idx}"):
                             ws = sh.worksheet("Ogrenciler")
-                            cell = ws.find(row["isim"])
-                            if cell:
-                                ws.update_cell(cell.row, 2, int(bakiye - 1))
-                                zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                sh.worksheet("Loglar").append_row([zaman, row["isim"], "Ders Yapıldı", ""])
-                                st.toast(f"Düşüldü: {isim}")
-                                time.sleep(0.5)
-                                st.rerun()
-                        
-                        if b2.button("İPTAL", key=f"i_{idx}"):
+                            cell = ws.find(isim_tam)
+                            ws.update_cell(cell.row, 2, int(bakiye - 1))
+                            zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
+                            sh.worksheet("Loglar").append_row([zaman, isim_tam, "Ders Yapıldı", ""])
+                            st.rerun()
+                            
+                        if st.button("➕", key=f"i_{idx}"):
                             ws = sh.worksheet("Ogrenciler")
-                            cell = ws.find(row["isim"])
-                            if cell:
-                                ws.update_cell(cell.row, 2, int(bakiye + 1))
-                                zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                sh.worksheet("Loglar").append_row([zaman, row["isim"], "Ders İptal/İade", "Düzeltme"])
-                                st.toast("Geri alındı.")
-                                time.sleep(0.5)
-                                st.rerun()
+                            cell = ws.find(isim_tam)
+                            ws.update_cell(cell.row, 2, int(bakiye + 1))
+                            zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
+                            sh.worksheet("Loglar").append_row([zaman, isim_tam, "Ders İptal/İade", "Düzeltme"])
+                            st.rerun()
 
     # === 2. YÖNETİM ===
     elif menu == "Yönetim":
@@ -214,7 +216,7 @@ if sh:
                         st.rerun()
 
     # === 3. ÖLÇÜMLER ===
-    elif menu == "Ölçümler":
+    elif menu == "Ölçüm":
         st.subheader("📏 Ölçüm")
         o_sec = None
         if not df_ogrenci.empty:
