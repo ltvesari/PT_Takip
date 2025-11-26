@@ -25,6 +25,25 @@ def baglanti_kur():
     sheet = client.open("PT_Takip_Sistemi")
     return sheet
 
+# --- ÖZEL TARİH ÇEVİRİCİ (TERMİNATÖR FONKSİYON) ---
+def tarihleri_zorla_cevir(df, kolon_adi):
+    """
+    Karmaşık formatlı tarihleri (hem noktalı, hem tireli, hem saatli) 
+    tek bir standarda çevirir.
+    """
+    # Önce hepsini yazıya (string) çevirip boşlukları temizle
+    df[kolon_adi] = df[kolon_adi].astype(str).str.strip()
+    
+    # Pandas'ın en güçlü çeviricisini kullan (mixed=True karışık formatları çözer)
+    # dayfirst=True -> 26.11.2025 gibi tarihleri doğru anlar
+    df["tarih_dt"] = pd.to_datetime(df[kolon_adi], dayfirst=True, format="mixed", errors='coerce')
+    
+    # Eğer "mixed" modu hata verirse (eski pandas sürümleri için), manuel deneme yap
+    if df["tarih_dt"].isnull().all():
+         df["tarih_dt"] = pd.to_datetime(df[kolon_adi], errors='coerce')
+
+    return df
+
 # --- VERİ ÇEKME ---
 def veri_getir():
     try:
@@ -38,7 +57,7 @@ def veri_getir():
         try: ws_olcum = sh.worksheet("Olcumler")
         except: ws_olcum = sh.add_worksheet(title="Olcumler", rows="1000", cols="5"); ws_olcum.append_row(["ogrenci", "tarih", "kilo", "yag", "bel"])
 
-        # Verileri String (Yazı) olarak al
+        # Verileri DataFrame'e al
         df_students = pd.DataFrame(ws_ogrenci.get_all_records()).astype(str)
         df_logs = pd.DataFrame(ws_log.get_all_records()).astype(str)
         df_measure = pd.DataFrame(ws_olcum.get_all_records())
@@ -73,31 +92,28 @@ if sh:
         arama = c1.text_input("🔍 Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
         
-        # --- SON DERS TARİHLERİNİ BULMA (AKILLI SIRALAMA) ---
+        # --- SON DERS TARİHLERİNİ BULMA (DÜZELTİLDİ) ---
         son_dersler = {}
         if not df_log.empty:
-            # 1. İşlem sütununu temizle
+            # 1. 'islem' temizliği
             df_log["islem"] = df_log["islem"].str.strip()
             
-            # 2. Tarihleri "Akıllı Çevirici" ile zamana çevir
-            # dayfirst=True -> 26.11.2025'i doğru anlar
-            # errors='coerce' -> Anlayamadığını boş geçer
-            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], dayfirst=True, errors='coerce')
+            # 2. ÖZEL FONKSİYON İLE TARİHLERİ DÜZELT
+            df_log = tarihleri_zorla_cevir(df_log, "tarih")
             
-            # 3. Tarihi bozuk olanları (NaT) temizle
+            # 3. Tarihi anlaşılamayanları (NaT) temizle
             gecerli_loglar = df_log.dropna(subset=["tarih_dt"])
 
             # 4. Sadece 'Ders Yapıldı' olanları al
             sadece_dersler = gecerli_loglar[gecerli_loglar["islem"] == "Ders Yapıldı"].copy()
             
-            # 5. EN ÖNEMLİ KISIM: Zamana göre sırala (En büyük/yeni tarih en üste)
+            # 5. EN YENİDEN EN ESKİYE SIRALA
             sadece_dersler = sadece_dersler.sort_values(by="tarih_dt", ascending=False)
             
-            # 6. Her öğrenci için ilk sırada geleni (yani en yenisini) kaydet
+            # 6. Her öğrenci için İLK GELENİ (en yeniyi) kaydet
             for _, row_log in sadece_dersler.iterrows():
                 ogr_adi = row_log["ogrenci"]
                 if ogr_adi not in son_dersler:
-                    # Gösterirken sadece Gün.Ay.Yıl göster (Daha sade durur)
                     son_dersler[ogr_adi] = row_log["tarih_dt"].strftime("%d.%m.%Y")
         # ---------------------------------------------
 
@@ -133,7 +149,7 @@ if sh:
                             cell = ws.find(isim)
                             if cell:
                                 ws.update_cell(cell.row, 2, int(bakiye - 1))
-                                # YENİ KAYITLARI "Yıl-Ay-Gün Saat:Dakika" formatında atıyoruz
+                                # TARİHİ TEXT FORMATINDA AMA DÜZGÜN KAYDET
                                 zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
                                 sh.worksheet("Loglar").append_row([zaman, isim, "Ders Yapıldı", ""])
                                 st.toast(f"{isim}: Ders düşüldü!")
@@ -190,7 +206,7 @@ if sh:
                 st.divider()
                 st.write("📜 **Ders Geçmişi**")
                 if not df_log.empty:
-                    df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], errors='coerce')
+                    df_log = tarihleri_zorla_cevir(df_log, "tarih")
                     kisi_log = df_log[df_log["ogrenci"] == sec].copy()
                     
                     if not kisi_log.empty:
@@ -233,11 +249,11 @@ if sh:
     elif menu == "Raporlar":
         st.header("📊 Raporlar")
         if not df_log.empty:
-            df_log["tarih_dt"] = pd.to_datetime(df_log["tarih"], dayfirst=True, errors='coerce')
+            df_log = tarihleri_zorla_cevir(df_log, "tarih")
             df_log = df_log.dropna(subset=["tarih_dt"])
             df_log["Ay"] = df_log["tarih_dt"].dt.strftime("%Y-%m")
             
             dersler = df_log[df_log["islem"].str.strip() == "Ders Yapıldı"]
             
             st.bar_chart(dersler["Ay"].value_counts())
-            st.dataframe(df_log[["tarih", "ogrenci", "islem"]].sort_values("tarih", ascending=False), use_container_width=True)
+            st.dataframe(df_log[["tarih", "ogrenci", "islem"]].sort_values("tarih_dt", ascending=False), use_container_width=True)
