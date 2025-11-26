@@ -49,6 +49,13 @@ st.markdown("""
     .ticket-date { font-size: 14px; color: #7f8c8d; margin-bottom: 20px; font-style: italic; }
     .ticket-balance-box { background-color: #3498DB; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
     .ticket-balance-num { font-size: 42px; font-weight: 800; line-height: 1; }
+    
+    /* DOĞUM GÜNÜ UYARISI */
+    .birthday-alert {
+        background-color: #FFD700; color: #d35400; padding: 10px;
+        border-radius: 10px; text-align: center; font-weight: bold;
+        margin-bottom: 20px; border: 2px solid #f39c12;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -114,11 +121,28 @@ if sh:
 
     # === 1. ANA EKRAN ===
     if menu == "Ana Ekran":
+        # DOĞUM GÜNÜ KONTROLÜ
+        bugun = datetime.now()
+        dogum_gunu_cocuklari = []
+        if not df_ogrenci.empty:
+            for _, row in df_ogrenci.iterrows():
+                dt_str = str(row.get("dogum_tarihi", "")).strip()
+                if dt_str and dt_str != "nan":
+                    try:
+                        dt = pd.to_datetime(dt_str, dayfirst=True)
+                        if dt.month == bugun.month and dt.day == bugun.day:
+                            dogum_gunu_cocuklari.append(row["isim"])
+                    except: pass
+        
+        if dogum_gunu_cocuklari:
+            st.balloons()
+            isimler = ", ".join(dogum_gunu_cocuklari)
+            st.markdown(f"<div class='birthday-alert'>🎂 İYİ Kİ DOĞDUN! Bugün {isimler} kullanıcısının doğum günü! 🥳</div>", unsafe_allow_html=True)
+
         # FİŞ GÖSTERİMİ
         if st.session_state["fis_goster"]:
             kisi = st.session_state["fis_goster"]
             kisi_row = df_ogrenci[df_ogrenci["isim"] == kisi["isim"]].iloc[0]
-            
             st.markdown("---")
             c_kapat = st.columns([4, 1])[1]
             c_kapat.button("X Kapat", on_click=lambda: st.session_state.update({"fis_goster": None}))
@@ -172,10 +196,14 @@ if sh:
                         st.markdown(f"<div class='card-header'>{isim}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='stat-box'><div class='stat-label'>KALAN</div><div class='stat-number'>{bakiye}</div></div>", unsafe_allow_html=True)
                         st.markdown(progress_bar_yap(bakiye), unsafe_allow_html=True)
+                        
                         if row["notlar"] and row["notlar"] != "nan":
                             st.markdown(f"<div class='notes'>⚠️ {row['notlar']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='last-date'>📅 Son: {son_tarih}</div>", unsafe_allow_html=True)
                         
+                        if str(row.get("dogum_tarihi","")).strip() and str(row.get("dogum_tarihi","")) != "nan":
+                             st.markdown(f"<div style='text-align:center; font-size:10px; color:#9b59b6;'>🎂 {row['dogum_tarihi']}</div>", unsafe_allow_html=True)
+
                         b1, b2, b3 = st.columns([1, 1, 1])
                         if b1.button("DÜŞ", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler"); cell = ws.find(isim); ws.update_cell(cell.row, 2, int(bakiye - 1))
@@ -190,37 +218,78 @@ if sh:
 
     # === 2. ÖĞRENCİ YÖNETİMİ ===
     elif menu == "Öğrenci Ekle/Düzenle":
-        st.header("⚙️ Yönetim")
-        t1, t2 = st.tabs(["Yeni Kayıt", "Düzenle"])
+        st.header("⚙️ Öğrenci Yönetimi")
+        t1, t2 = st.tabs(["Yeni Kayıt", "Düzenle / Paket Yükle"])
         with t1:
             with st.form("ekle"):
                 ad = st.text_input("Ad Soyad")
                 bas = st.number_input("Paket", value=10)
                 nt = st.text_area("Notlar")
-                dt_input = st.date_input("Doğum Tarihi", value=None, min_value=datetime(1950,1,1))
+                dt_input = st.date_input("Doğum Tarihi (Opsiyonel)", value=None, min_value=datetime(1950,1,1))
                 if st.form_submit_button("Kaydet"):
                     sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", datetime.now().strftime("%Y-%m-%d"), dt_input.strftime("%Y-%m-%d") if dt_input else ""])
                     st.success("Kaydedildi"); st.rerun()
         with t2:
             if not df_ogrenci.empty:
-                sec = st.selectbox("Seç", df_ogrenci["isim"].tolist())
+                sec = st.selectbox("Öğrenci Seç", df_ogrenci["isim"].tolist())
                 sec_veri = df_ogrenci[df_ogrenci["isim"] == sec].iloc[0]
+                
                 c1, c2 = st.columns(2)
                 with c1:
+                    st.subheader("📦 Paket İşlemleri")
                     ek = st.number_input("Ekle", value=10)
                     if st.button("Yükle"):
                         ws = sh.worksheet("Ogrenciler"); cell = ws.find(sec); ws.update_cell(cell.row, 2, int(sec_veri["bakiye"] + ek))
                         sh.worksheet("Loglar").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), sec, "Paket Yüklendi", f"{ek} ders"])
                         st.success("Yüklendi"); st.rerun()
-                with c2:
-                    yeni_not = st.text_area("Not", value=sec_veri.get("notlar", ""))
-                    if st.button("Güncelle"):
-                        ws = sh.worksheet("Ogrenciler"); cell = ws.find(sec); ws.update_cell(cell.row, 3, yeni_not)
+                    
+                    st.divider()
+                    mevcut_durum = sec_veri.get("durum", "active")
+                    yeni_durum = st.radio("Durum", ["active", "passive"], index=0 if mevcut_durum=="active" else 1)
+                    if st.button("Durumu Güncelle"):
+                        ws = sh.worksheet("Ogrenciler"); cell = ws.find(sec); ws.update_cell(cell.row, 4, yeni_durum)
                         st.success("Güncellendi"); st.rerun()
+
+                with c2:
+                    st.subheader("📝 Bilgiler")
+                    # NOT DÜZENLEME
+                    mevcut_not = sec_veri.get("notlar", "")
+                    if mevcut_not == "nan": mevcut_not = ""
+                    yeni_not = st.text_area("Notlar", value=mevcut_not)
+                    
+                    # DOĞUM TARİHİ DÜZENLEME (YENİ EKLENDİ)
+                    mevcut_dt_str = str(sec_veri.get("dogum_tarihi", "")).strip()
+                    dt_value = None
+                    if mevcut_dt_str and mevcut_dt_str != "nan":
+                        try: dt_value = pd.to_datetime(mevcut_dt_str, dayfirst=True).date()
+                        except: pass
+                    
+                    yeni_dt = st.date_input("Doğum Tarihi", value=dt_value, min_value=datetime(1950,1,1))
+
+                    if st.button("Bilgileri Kaydet"):
+                        ws = sh.worksheet("Ogrenciler")
+                        cell = ws.find(sec)
+                        # Notlar 3. sütun, Doğum Tarihi 6. sütun
+                        ws.update_cell(cell.row, 3, yeni_not)
+                        dt_save = yeni_dt.strftime("%Y-%m-%d") if yeni_dt else ""
+                        ws.update_cell(cell.row, 6, dt_save)
+                        st.success("Bilgiler kaydedildi"); st.rerun()
+
+                st.divider()
+                st.subheader(f"📜 {sec} - Ders Geçmişi")
+                if not df_log.empty:
+                    df_log = tarihleri_zorla_cevir(df_log, "tarih")
+                    kisi_log = df_log[df_log["ogrenci"] == sec].copy()
+                    if not kisi_log.empty:
+                        # YENİDEN ESKİYE SIRALA (İSTEK ÜZERİNE)
+                        kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
+                        st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
+                    else:
+                        st.info("Kayıt yok.")
 
     # === 3. ÖLÇÜMLER ===
     elif menu == "Vücut Ölçümleri":
-        st.header("📏 Ölçümler")
+        st.header("📏 Vücut Ölçümleri")
         o_sec = None
         if not df_ogrenci.empty:
             o_sec = st.selectbox("Öğrenci", df_ogrenci["isim"].tolist())
@@ -235,35 +304,26 @@ if sh:
                     kisi_olcum["kilo"] = pd.to_numeric(kisi_olcum["kilo"], errors='coerce')
                     st.line_chart(kisi_olcum, x="tarih", y="kilo")
 
-    # === 4. RAPORLAR (GRAFİK GERİ GELDİ) ===
+    # === 4. RAPORLAR ===
     elif menu == "Raporlar":
         st.header("📊 Raporlar")
         if not df_log.empty:
-            # Tarihleri düzelt
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
             df_log = df_log.dropna(subset=["tarih_dt"])
             df_log["Ay"] = df_log["tarih_dt"].dt.strftime("%Y-%m")
             
-            # Sadece dersleri filtrele
             dersler = df_log[df_log["islem"].str.strip() == "Ders Yapıldı"]
             
-            # --- 1. GRAFİK ---
             st.subheader("Aylık Ders Yoğunluğu")
-            if not dersler.empty:
-                st.bar_chart(dersler["Ay"].value_counts().sort_index())
-                
-                # İstatistikler
-                bu_ay = datetime.now().strftime("%Y-%m")
-                bu_ay_ders = len(dersler[dersler["Ay"] == bu_ay])
-                toplam_ders = len(dersler)
-                c1, c2 = st.columns(2)
-                c1.metric("Bu Ay Yapılan Ders", bu_ay_ders)
-                c2.metric("Toplam Yapılan Ders", toplam_ders)
-            else:
-                st.info("Henüz ders kaydı yok.")
+            st.bar_chart(dersler["Ay"].value_counts())
+            
+            bu_ay = datetime.now().strftime("%Y-%m")
+            bu_ay_ders = len(dersler[dersler["Ay"] == bu_ay])
+            c1, c2 = st.columns(2)
+            c1.metric("Bu Ay Yapılan", bu_ay_ders)
+            c2.metric("Toplam Ders", len(dersler))
             
             st.divider()
-            # --- 2. TABLO ---
             st.subheader("Tüm İşlem Geçmişi")
             df_sirali = df_log.sort_values("tarih_dt", ascending=False)
             st.dataframe(df_sirali[["tarih", "ogrenci", "islem"]], use_container_width=True)
