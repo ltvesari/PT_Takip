@@ -6,45 +6,119 @@ from datetime import datetime
 import time
 
 # --- AYARLAR ---
-st.set_page_config(page_title="PT", layout="wide", page_icon="💪")
+st.set_page_config(page_title="PT Levent Hoca", layout="wide", page_icon="💪")
 
-# --- CSS: TEMİZ VE OKUNAKLI TASARIM ---
+# --- MODERN PASTEL MAVİ TASARIM (CSS) ---
 st.markdown("""
 <style>
-    /* Butonları Güzelleştir */
-    .stButton button {
-        width: 100%;
-        border-radius: 8px;
-        font-weight: bold;
-        height: 35px; /* Normal, parmakla basılabilir boyut */
-    }
-    
-    /* İPTAL butonu (Beyaz) */
-    button[kind="secondary"] {
-        border: 1px solid #ccc !important;
-        background-color: white !important;
-        color: black !important;
+    /* GENEL SAYFA ARKAPLANI */
+    .stApp {
+        background-color: #F4F7F6; /* Çok açık gri-mavi */
     }
 
-    /* DÜŞ butonu (Kırmızı) */
-    button[kind="primary"] {
-        background-color: #ff4b4b !important;
-        color: white !important;
-        border: none !important;
+    /* SIDEBAR (YAN MENÜ) */
+    [data-testid="stSidebar"] {
+        background-color: #2C3E50; /* Koyu Lacivert */
+    }
+    [data-testid="stSidebar"] * {
+        color: #ecf0f1 !important; /* Sidebar yazıları açık renk */
+    }
+
+    /* KART YAPISI */
+    div[data-testid="column"] {
+        padding: 5px !important;
     }
     
-    /* Kart Tasarımı */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        padding: 15px !important;
-        border: 1px solid #e6e6e6;
-        border-radius: 10px;
-        background-color: #f9f9f9;
+        background-color: white;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* Hafif gölge */
+        padding: 0px !important; /* İç boşluğu sıfırla (Header için) */
+        overflow: hidden;
+    }
+
+    /* KART BAŞLIĞI (İSİM ALANI) */
+    .card-header {
+        background-color: #3498DB; /* Pastel Mavi */
+        color: white;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 14px;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
     }
     
-    /* Metrik Rakamları */
-    div[data-testid="stMetricValue"] {
-        font-size: 32px !important;
+    /* BAKİYE ALANI */
+    .stat-box {
+        padding: 15px 10px 5px 10px;
+        text-align: center;
     }
+    .stat-number {
+        font-size: 32px;
+        font-weight: 800;
+        color: #2C3E50;
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* SON DERS TARİHİ */
+    .last-date {
+        font-size: 11px;
+        color: #95a5a6;
+        text-align: center;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* BUTONLAR */
+    .stButton button {
+        width: 100%;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        padding: 0.5rem 1rem;
+        border: none;
+        transition: all 0.2s;
+    }
+
+    /* DÜŞ BUTONU (KIRMIZI) */
+    button[kind="primary"] {
+        background-color: #E74C3C !important; /* Pastel Kırmızı */
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #c0392b !important;
+    }
+
+    /* İPTAL BUTONU (GRİ) */
+    button[kind="secondary"] {
+        background-color: #BDC3C7 !important; /* Pastel Gri */
+        color: #2C3E50 !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #95a5a6 !important;
+    }
+    
+    /* NOTLAR */
+    .notes {
+        font-size: 11px;
+        color: #e67e22; /* Turuncu uyarı */
+        text-align: center;
+        margin-top: -10px;
+        margin-bottom: 10px;
+        font-style: italic;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -90,20 +164,18 @@ def veri_getir():
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
-    # YAN MENÜ (SOL TARAFTA)
+    # YAN MENÜ
     with st.sidebar:
-        st.title("💪 PT KONTROL")
-        st.write("👤 **Levent Hoca**")
+        st.markdown("### 💪 PT KONTROL")
         menu = st.radio("Menü", ["Ana Ekran", "Öğrenci Ekle/Düzenle", "Vücut Ölçümleri", "Raporlar"])
         if st.button("🔄 Verileri Yenile"):
             st.cache_data.clear()
             st.rerun()
 
-    # === 1. ANA EKRAN (NORMAL IZGARA) ===
+    # === 1. ANA EKRAN ===
     if menu == "Ana Ekran":
-        st.header("📋 Öğrenci Listesi")
+        st.markdown("### 📋 Öğrenci Listesi")
         
-        # Arama ve Filtre
         c1, c2 = st.columns([3, 1])
         arama = c1.text_input("🔍 İsim Ara...")
         filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
@@ -119,7 +191,6 @@ if sh:
                     son_dersler[row_log["ogrenci"]] = row_log["tarih_dt"].strftime("%d.%m.%Y")
 
         if not df_ogrenci.empty:
-            # Filtreleme
             mask = pd.Series([True] * len(df_ogrenci))
             if filtre == "Aktif": mask = mask & (df_ogrenci["durum"] == "active")
             if filtre == "Pasif": mask = mask & (df_ogrenci["durum"] == "passive")
@@ -127,33 +198,40 @@ if sh:
             
             filtrelenmis = df_ogrenci[mask]
             
-            # 4 SÜTUNLU FERAH TASARIM
+            # 4 SÜTUNLU TASARIM
             cols = st.columns(4)
             
             for idx, row in filtrelenmis.iterrows():
                 col = cols[idx % 4]
                 with col:
                     with st.container(border=True):
-                        bakiye = row["bakiye"]
+                        # --- ÖZEL HTML KART TASARIMI ---
                         isim = row["isim"]
-                        renk = "🟢" if bakiye >= 5 else "🟠" if bakiye > 0 else "🔴"
-                        
-                        # Başlık
-                        st.markdown(f"### {renk} {isim}")
-                        
-                        # Bakiye Göstergesi
-                        st.metric("Kalan Ders", bakiye)
-                        
-                        # Notlar ve Son Ders
-                        not_goster = row["notlar"] if row["notlar"] and row["notlar"] != "nan" else "Normal"
-                        st.caption(f"📝 {not_goster}")
-                        
+                        bakiye = row["bakiye"]
                         son_tarih = son_dersler.get(isim, "-")
-                        st.caption(f"📅 **Son Ders:** {son_tarih}")
                         
-                        # Butonlar
+                        # 1. MAVİ BAŞLIK
+                        st.markdown(f"<div class='card-header'>{isim}</div>", unsafe_allow_html=True)
+                        
+                        # 2. BAKİYE
+                        st.markdown(f"""
+                        <div class='stat-box'>
+                            <div class='stat-label'>KALAN DERS</div>
+                            <div class='stat-number'>{bakiye}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # 3. NOTLAR (Varsa)
+                        if row["notlar"] and row["notlar"] != "nan":
+                            st.markdown(f"<div class='notes'>⚠️ {row['notlar']}</div>", unsafe_allow_html=True)
+
+                        # 4. SON DERS
+                        st.markdown(f"<div class='last-date'>📅 Son: {son_tarih}</div>", unsafe_allow_html=True)
+                        
+                        # 5. BUTONLAR
                         b1, b2 = st.columns(2)
-                        if b1.button("DÜŞ", key=f"d_{idx}", type="primary"):
+                        
+                        if b1.button("DÜŞ 📉", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler")
                             cell = ws.find(isim)
                             ws.update_cell(cell.row, 2, int(bakiye - 1))
@@ -163,7 +241,7 @@ if sh:
                             time.sleep(0.5)
                             st.rerun()
                         
-                        if b2.button("İPTAL", key=f"i_{idx}"):
+                        if b2.button("İPTAL ↩️", key=f"i_{idx}", type="secondary"):
                             ws = sh.worksheet("Ogrenciler")
                             cell = ws.find(isim)
                             ws.update_cell(cell.row, 2, int(bakiye + 1))
