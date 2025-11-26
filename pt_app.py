@@ -8,98 +8,42 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT", layout="wide", page_icon="💪")
 
-# --- CSS İLE TELEFONU ZORLAMA VE BUTON RENKLENDİRME ---
+# --- CSS: TEMİZ VE OKUNAKLI TASARIM ---
 st.markdown("""
 <style>
-    /* 1. Sayfa Kenar Boşluklarını Yok Et */
-    .block-container {
-        padding-top: 0rem;
-        padding-bottom: 0rem;
-        padding-left: 0.1rem;
-        padding-right: 0.1rem;
-    }
-
-    /* 2. TELEFON İÇİN ÖZEL KOD (Zorla Yan Yana) */
-    @media (max-width: 800px) {
-        div[data-testid="column"] {
-            width: 12% !important;
-            flex: 0 0 12% !important;
-            min-width: 0px !important;
-            padding: 0px 1px !important;
-        }
-        div[data-testid="stHorizontalBlock"] {
-            flex-wrap: nowrap !important;
-            gap: 1px !important;
-        }
-    }
-
-    /* Masaüstü için de aynı ayar */
-    div[data-testid="column"] {
-        width: 12% !important;
-        flex: 0 0 12% !important;
-        min-width: 0px !important;
-        padding: 0px 1px !important;
-    }
-
-    /* 3. Butonları Ayarla */
+    /* Butonları Güzelleştir */
     .stButton button {
         width: 100%;
-        padding: 0px !important;
-        font-size: 9px !important; /* Yazılar sığsın diye minik font */
-        font-weight: bold !important;
-        line-height: 1 !important;
-        height: 22px !important;
-        min-height: 0px !important;
-        margin-top: 2px !important;
+        border-radius: 8px;
+        font-weight: bold;
+        height: 35px; /* Normal, parmakla basılabilir boyut */
     }
     
-    /* İPTAL butonu (Secondary) Beyaz kalsın, kenarlığı ince olsun */
+    /* İPTAL butonu (Beyaz) */
     button[kind="secondary"] {
         border: 1px solid #ccc !important;
         background-color: white !important;
         color: black !important;
     }
 
-    /* DÜŞ butonu (Primary) Kırmızı olsun */
+    /* DÜŞ butonu (Kırmızı) */
     button[kind="primary"] {
-        background-color: #ff4b4b !important; /* Streamlit Kırmızısı */
+        background-color: #ff4b4b !important;
         color: white !important;
         border: none !important;
     }
     
-    /* 4. İsimleri Küçült */
-    .ogrenci-isim {
-        font-size: 9px;
-        font-weight: bold;
-        text-align: center;
-        line-height: 1;
-        white-space: normal; 
-        height: 22px;
-        overflow: hidden;
-        margin-bottom: 0px;
-    }
-    
-    /* 5. Bakiyeyi Küçült */
-    .ogrenci-bakiye {
-        font-size: 14px;
-        font-weight: bold;
-        text-align: center;
-        margin: 0px;
-        line-height: 1;
-    }
-    
-    /* 6. Son Tarihi Küçült */
-    .son-tarih {
-        font-size: 7px;
-        color: grey;
-        text-align: center;
-        margin-bottom: 1px;
-    }
-
-    /* 7. Kutunun Çerçevesi */
+    /* Kart Tasarımı */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        padding: 1px !important;
-        border: 1px solid #ddd;
+        padding: 15px !important;
+        border: 1px solid #e6e6e6;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+    }
+    
+    /* Metrik Rakamları */
+    div[data-testid="stMetricValue"] {
+        font-size: 32px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -139,26 +83,32 @@ def veri_getir():
 
         return sh, df_students, df_logs, df_measure
     except Exception as e:
-        st.error(f"Hata: {e}")
+        st.error(f"Bağlantı Hatası: {e}")
         return None, None, None, None
 
 # --- ANA PROGRAM ---
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
-    # YAN MENÜ (SOLDA)
+    # YAN MENÜ (SOL TARAFTA)
     with st.sidebar:
-        st.markdown("### 🏋️‍♂️ PT")
-        menu = st.radio("", ["Liste", "Yönetim", "Ölçüm", "Rapor"])
-        if st.button("🔄"):
+        st.title("💪 PT KONTROL")
+        st.write("👤 **Levent Hoca**")
+        menu = st.radio("Menü", ["Ana Ekran", "Öğrenci Ekle/Düzenle", "Vücut Ölçümleri", "Raporlar"])
+        if st.button("🔄 Verileri Yenile"):
             st.cache_data.clear()
             st.rerun()
 
-    # === 1. LİSTE (MİKRO MOD - 8 SÜTUNLU) ===
-    if menu == "Liste":
-        arama = st.text_input("", placeholder="Ara...", label_visibility="collapsed")
+    # === 1. ANA EKRAN (NORMAL IZGARA) ===
+    if menu == "Ana Ekran":
+        st.header("📋 Öğrenci Listesi")
         
-        # Son Dersler
+        # Arama ve Filtre
+        c1, c2 = st.columns([3, 1])
+        arama = c1.text_input("🔍 İsim Ara...")
+        filtre = c2.selectbox("Filtre", ["Aktif", "Pasif", "Tümü"])
+        
+        # Son Dersleri Hesapla
         son_dersler = {}
         if not df_log.empty:
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
@@ -166,107 +116,157 @@ if sh:
             sadece_dersler = sadece_dersler.sort_values(by="tarih_dt", ascending=False)
             for _, row_log in sadece_dersler.iterrows():
                 if row_log["ogrenci"] not in son_dersler:
-                    son_dersler[row_log["ogrenci"]] = row_log["tarih_dt"].strftime("%d.%m")
+                    son_dersler[row_log["ogrenci"]] = row_log["tarih_dt"].strftime("%d.%m.%Y")
 
         if not df_ogrenci.empty:
-            df_aktif = df_ogrenci[df_ogrenci["durum"] == "active"]
-            if arama:
-                df_aktif = df_aktif[df_aktif["isim"].str.contains(arama, case=False)]
+            # Filtreleme
+            mask = pd.Series([True] * len(df_ogrenci))
+            if filtre == "Aktif": mask = mask & (df_ogrenci["durum"] == "active")
+            if filtre == "Pasif": mask = mask & (df_ogrenci["durum"] == "passive")
+            if arama: mask = mask & (df_ogrenci["isim"].str.contains(arama, case=False))
             
-            # --- 8 SÜTUNLU IZGARA ---
-            SUTUN_SAYISI = 8 
-            cols = st.columns(SUTUN_SAYISI)
+            filtrelenmis = df_ogrenci[mask]
             
-            for idx, row in df_aktif.iterrows():
-                col_index = idx % SUTUN_SAYISI
-                
-                with cols[col_index]:
+            # 4 SÜTUNLU FERAH TASARIM
+            cols = st.columns(4)
+            
+            for idx, row in filtrelenmis.iterrows():
+                col = cols[idx % 4]
+                with col:
                     with st.container(border=True):
-                        isim_tam = row["isim"]
                         bakiye = row["bakiye"]
-                        renk = "green" if bakiye >= 5 else "orange" if bakiye > 0 else "red"
+                        isim = row["isim"]
+                        renk = "🟢" if bakiye >= 5 else "🟠" if bakiye > 0 else "🔴"
                         
-                        st.markdown(f"<div class='ogrenci-isim'>{isim_tam}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='ogrenci-bakiye' style='color:{renk}'>{bakiye}</div>", unsafe_allow_html=True)
+                        # Başlık
+                        st.markdown(f"### {renk} {isim}")
                         
-                        son_tarih = son_dersler.get(isim_tam, "-")
-                        st.markdown(f"<div class='son-tarih'>{son_tarih}</div>", unsafe_allow_html=True)
+                        # Bakiye Göstergesi
+                        st.metric("Kalan Ders", bakiye)
                         
-                        # BUTONLAR: DÜŞ (Kırmızı) ve İPTAL (Beyaz)
-                        # 'type="primary"' -> CSS ile Kırmızı yapıldı
-                        # 'type="secondary"' (varsayılan) -> CSS ile Beyaz yapıldı
-                        if st.button("DÜŞ", key=f"d_{idx}", type="primary"):
+                        # Notlar ve Son Ders
+                        not_goster = row["notlar"] if row["notlar"] and row["notlar"] != "nan" else "Normal"
+                        st.caption(f"📝 {not_goster}")
+                        
+                        son_tarih = son_dersler.get(isim, "-")
+                        st.caption(f"📅 **Son Ders:** {son_tarih}")
+                        
+                        # Butonlar
+                        b1, b2 = st.columns(2)
+                        if b1.button("DÜŞ", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler")
-                            cell = ws.find(isim_tam)
+                            cell = ws.find(isim)
                             ws.update_cell(cell.row, 2, int(bakiye - 1))
                             zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                            sh.worksheet("Loglar").append_row([zaman, isim_tam, "Ders Yapıldı", ""])
-                            st.toast("Düşüldü")
-                            time.sleep(0.1)
+                            sh.worksheet("Loglar").append_row([zaman, isim, "Ders Yapıldı", ""])
+                            st.toast(f"{isim}: Ders düşüldü!")
+                            time.sleep(0.5)
                             st.rerun()
-                            
-                        if st.button("İPTAL", key=f"i_{idx}"):
+                        
+                        if b2.button("İPTAL", key=f"i_{idx}"):
                             ws = sh.worksheet("Ogrenciler")
-                            cell = ws.find(isim_tam)
+                            cell = ws.find(isim)
                             ws.update_cell(cell.row, 2, int(bakiye + 1))
                             zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                            sh.worksheet("Loglar").append_row([zaman, isim_tam, "Ders İptal/İade", "Düzeltme"])
-                            st.toast("İade")
-                            time.sleep(0.1)
+                            sh.worksheet("Loglar").append_row([zaman, isim, "Ders İptal/İade", "Düzeltme"])
+                            st.toast("İşlem geri alındı.")
+                            time.sleep(0.5)
                             st.rerun()
 
-    # === 2. YÖNETİM ===
-    elif menu == "Yönetim":
-        st.header("⚙️")
-        t1, t2 = st.tabs(["Yeni", "Düzenle"])
+    # === 2. ÖĞRENCİ YÖNETİMİ ===
+    elif menu == "Öğrenci Ekle/Düzenle":
+        st.header("⚙️ Öğrenci Yönetimi")
+        t1, t2 = st.tabs(["Yeni Kayıt", "Düzenle / Paket Yükle"])
+        
         with t1:
             with st.form("ekle"):
-                ad = st.text_input("Ad")
-                bas = st.number_input("Paket", value=10)
+                ad = st.text_input("Ad Soyad")
+                bas = st.number_input("Paket Başlangıç", value=10)
+                nt = st.text_area("Notlar")
                 if st.form_submit_button("Kaydet"):
                     zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    sh.worksheet("Ogrenciler").append_row([ad, bas, "", "active", zaman])
-                    st.success("OK")
+                    sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", zaman])
+                    st.success("Öğrenci Eklendi!")
+                    time.sleep(1)
                     st.rerun()
+                    
         with t2:
             if not df_ogrenci.empty:
-                sec = st.selectbox("Seç", df_ogrenci["isim"].tolist())
+                sec = st.selectbox("Öğrenci Seç", df_ogrenci["isim"].tolist())
                 sec_veri = df_ogrenci[df_ogrenci["isim"] == sec].iloc[0]
-                ek = st.number_input("Ekle", value=10)
-                if st.button("Yükle"):
-                    ws = sh.worksheet("Ogrenciler")
-                    cell = ws.find(sec)
-                    if cell:
+                
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.subheader("Paket Yükle")
+                    ek = st.number_input("Eklenecek Ders Sayısı", value=10)
+                    if st.button("Paketi Tanımla"):
+                        ws = sh.worksheet("Ogrenciler")
+                        cell = ws.find(sec)
                         ws.update_cell(cell.row, 2, int(sec_veri["bakiye"] + ek))
                         zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
                         sh.worksheet("Loglar").append_row([zaman, sec, "Paket Yüklendi", f"{ek} ders"])
-                        st.success("OK")
+                        st.success("Paket Yüklendi!")
                         st.rerun()
+                
+                st.divider()
+                st.subheader(f"📜 {sec} - Ders Geçmişi")
+                if not df_log.empty:
+                    df_log = tarihleri_zorla_cevir(df_log, "tarih")
+                    kisi_log = df_log[df_log["ogrenci"] == sec].copy()
+                    
+                    if not kisi_log.empty:
+                        kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
+                        st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
+                    else:
+                        st.info("Bu öğrenciye ait geçmiş kayıt bulunamadı.")
 
     # === 3. ÖLÇÜMLER ===
-    elif menu == "Ölçüm":
-        st.subheader("📏")
+    elif menu == "Vücut Ölçümleri":
+        st.header("📏 Vücut Ölçümleri")
         o_sec = None
-        if not df_ogrenci.empty:
-            o_sec = st.selectbox("Öğrenci", df_ogrenci["isim"].tolist())
-            with st.form("olcum"):
-                c1, c2 = st.columns(2)
-                kg = c1.number_input("Kilo")
-                yg = c2.number_input("Yağ")
-                bl = st.number_input("Bel")
-                if st.form_submit_button("Kaydet"):
-                    trh = datetime.now().strftime("%Y-%m-%d")
-                    sh.worksheet("Olcumler").append_row([o_sec, trh, kg, yg, bl])
-                    st.success("OK")
-                    st.rerun()
-            if o_sec and not df_olcum.empty:
-                kisi_olcum = df_olcum[df_olcum["ogrenci"] == o_sec].copy()
-                if not kisi_olcum.empty:
-                    kisi_olcum["kilo"] = pd.to_numeric(kisi_olcum["kilo"], errors='coerce')
-                    st.line_chart(kisi_olcum, x="tarih", y="kilo")
+        if df_ogrenci.empty:
+            st.warning("Henüz öğrenci listeniz boş.")
+        else:
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                o_sec = st.selectbox("Öğrenci Seçiniz", df_ogrenci["isim"].tolist())
+                with st.form("olcum"):
+                    st.write("Yeni Ölçüm Gir")
+                    trh = st.date_input("Tarih")
+                    kg = st.number_input("Kilo (kg)")
+                    yg = st.number_input("Yağ Oranı (%)")
+                    bl = st.number_input("Bel (cm)")
+                    if st.form_submit_button("Kaydet"):
+                        trh_str = trh.strftime("%Y-%m-%d")
+                        sh.worksheet("Olcumler").append_row([o_sec, trh_str, kg, yg, bl])
+                        st.success("Ölçüm Kaydedildi!")
+                        time.sleep(1)
+                        st.rerun()
+            
+            with c2:
+                if o_sec and not df_olcum.empty:
+                    kisi_olcum = df_olcum[df_olcum["ogrenci"] == o_sec].copy()
+                    if not kisi_olcum.empty:
+                        st.write(f"📈 **{o_sec} - Gelişim Grafiği**")
+                        kisi_olcum["kilo"] = pd.to_numeric(kisi_olcum["kilo"], errors='coerce')
+                        st.line_chart(kisi_olcum, x="tarih", y="kilo")
+                        st.dataframe(kisi_olcum, use_container_width=True)
+                    else:
+                        st.info("Henüz veri yok.")
 
-    # === 4. RAPOR ===
-    elif menu == "Rapor":
+    # === 4. RAPORLAR ===
+    elif menu == "Raporlar":
+        st.header("📊 Genel Raporlar")
         if not df_log.empty:
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
+            df_log = df_log.dropna(subset=["tarih_dt"])
+            df_log["Ay"] = df_log["tarih_dt"].dt.strftime("%Y-%m")
+            
+            dersler = df_log[df_log["islem"].str.strip() == "Ders Yapıldı"]
+            
+            st.subheader("Aylık Ders Yoğunluğu")
+            st.bar_chart(dersler["Ay"].value_counts())
+            
+            st.divider()
+            st.subheader("Tüm İşlem Geçmişi")
             st.dataframe(df_log[["tarih", "ogrenci", "islem"]].sort_values("tarih_dt", ascending=False), use_container_width=True)
