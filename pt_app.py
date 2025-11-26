@@ -154,15 +154,15 @@ def tarihleri_zorla_cevir(df, kolon_adi):
          df["tarih_dt"] = pd.to_datetime(df[kolon_adi], errors='coerce')
     return df
 
-# --- (EKSİK OLAN FONKSİYON EKLENDİ) PROGRESS BAR YAPICI ---
+# --- PROGRESS BAR YAPICI ---
 def progress_bar_yap(bakiye):
-    # Maksimum paket boyutunu 20 varsayalım (görsel doluluk için)
-    yuzde = min(bakiye * 5, 100) # 20 ders = %100
+    # Maksimum paket boyutunu 20 varsayalım
+    yuzde = min(bakiye * 5, 100) 
     
     # Renk Belirleme
-    if bakiye <= 3: renk = "#E74C3C" # Kırmızı (Kritik)
-    elif bakiye <= 7: renk = "#F39C12" # Turuncu (Azalıyor)
-    else: renk = "#2ECC71" # Yeşil (İyi)
+    if bakiye <= 3: renk = "#E74C3C" # Kırmızı
+    elif bakiye <= 7: renk = "#F39C12" # Turuncu
+    else: renk = "#2ECC71" # Yeşil
     
     html = f"""
     <div class="progress-container">
@@ -253,7 +253,7 @@ if sh:
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # PROGRESS BAR EKLENDİ
+                        # PROGRESS BAR
                         st.markdown(progress_bar_yap(bakiye), unsafe_allow_html=True)
                         
                         # 3. NOTLAR (Varsa)
@@ -367,7 +367,7 @@ if sh:
                     else:
                         st.info("Henüz veri yok.")
 
-    # === 4. RAPORLAR ===
+    # === 4. RAPORLAR (HATA DÜZELTİLDİ) ===
     elif menu == "Raporlar":
         st.header("📊 Genel Raporlar")
         if not df_log.empty:
@@ -382,4 +382,6 @@ if sh:
             
             st.divider()
             st.subheader("Tüm İşlem Geçmişi")
-            st.dataframe(df_log[["tarih", "ogrenci", "islem"]].sort_values("tarih_dt", ascending=False), use_container_width=True)
+            # --- DÜZELTME BURADA: Önce sırala, sonra sütun seç ---
+            df_sirali = df_log.sort_values("tarih_dt", ascending=False)
+            st.dataframe(df_sirali[["tarih", "ogrenci", "islem"]], use_container_width=True)
