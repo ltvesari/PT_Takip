@@ -8,51 +8,80 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT", layout="wide", page_icon="💪")
 
-# --- CSS İLE ZORLA KÜÇÜLTME (8'li Sıra İçin) ---
+# --- CSS İLE TELEFONU ZORLAMA VE BUTON RENKLENDİRME ---
 st.markdown("""
 <style>
     /* 1. Sayfa Kenar Boşluklarını Yok Et */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 0rem;
         padding-bottom: 0rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-left: 0.1rem;
+        padding-right: 0.1rem;
     }
-    
-    /* 2. Sütunları ZORLA Yan Yana Tut */
+
+    /* 2. TELEFON İÇİN ÖZEL KOD (Zorla Yan Yana) */
+    @media (max-width: 800px) {
+        div[data-testid="column"] {
+            width: 12% !important;
+            flex: 0 0 12% !important;
+            min-width: 0px !important;
+            padding: 0px 1px !important;
+        }
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+            gap: 1px !important;
+        }
+    }
+
+    /* Masaüstü için de aynı ayar */
     div[data-testid="column"] {
-        flex: 1 0 auto !important;
-        min_width: 0px !important;
-        width: 11% !important; /* Ekrana 9 tane sığması için %11 genişlik */
+        width: 12% !important;
+        flex: 0 0 12% !important;
+        min-width: 0px !important;
         padding: 0px 1px !important;
     }
-    
-    /* 3. Butonları İyice Küçült */
+
+    /* 3. Butonları Ayarla */
     .stButton button {
         width: 100%;
         padding: 0px !important;
-        font-size: 10px !important;
+        font-size: 9px !important; /* Yazılar sığsın diye minik font */
+        font-weight: bold !important;
         line-height: 1 !important;
-        height: 20px !important;
+        height: 22px !important;
         min-height: 0px !important;
         margin-top: 2px !important;
     }
     
-    /* 4. İsimleri Küçült ama Tam Göster */
+    /* İPTAL butonu (Secondary) Beyaz kalsın, kenarlığı ince olsun */
+    button[kind="secondary"] {
+        border: 1px solid #ccc !important;
+        background-color: white !important;
+        color: black !important;
+    }
+
+    /* DÜŞ butonu (Primary) Kırmızı olsun */
+    button[kind="primary"] {
+        background-color: #ff4b4b !important; /* Streamlit Kırmızısı */
+        color: white !important;
+        border: none !important;
+    }
+    
+    /* 4. İsimleri Küçült */
     .ogrenci-isim {
-        font-size: 10px;
+        font-size: 9px;
         font-weight: bold;
         text-align: center;
         line-height: 1;
-        white-space: normal;
-        height: 24px;
+        white-space: normal; 
+        height: 22px;
         overflow: hidden;
         margin-bottom: 0px;
     }
     
     /* 5. Bakiyeyi Küçült */
     .ogrenci-bakiye {
-        font-size: 16px;
+        font-size: 14px;
         font-weight: bold;
         text-align: center;
         margin: 0px;
@@ -61,15 +90,15 @@ st.markdown("""
     
     /* 6. Son Tarihi Küçült */
     .son-tarih {
-        font-size: 8px;
+        font-size: 7px;
         color: grey;
         text-align: center;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
     }
 
-    /* 7. Kutunun Çerçevesini İncelt */
+    /* 7. Kutunun Çerçevesi */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        padding: 2px !important;
+        padding: 1px !important;
         border: 1px solid #ddd;
     }
 </style>
@@ -117,18 +146,17 @@ def veri_getir():
 sh, df_ogrenci, df_log, df_olcum = veri_getir()
 
 if sh:
-    # YAN MENÜ (GERİ GELDİ)
+    # YAN MENÜ (SOLDA)
     with st.sidebar:
-        st.markdown("### 💪 PT KONTROL")
-        menu = st.radio("Menü", ["Liste", "Yönetim", "Ölçüm", "Rapor"])
-        if st.button("🔄 Yenile"):
+        st.markdown("### 🏋️‍♂️ PT")
+        menu = st.radio("", ["Liste", "Yönetim", "Ölçüm", "Rapor"])
+        if st.button("🔄"):
             st.cache_data.clear()
             st.rerun()
 
     # === 1. LİSTE (MİKRO MOD - 8 SÜTUNLU) ===
     if menu == "Liste":
-        # Arama
-        arama = st.text_input("", placeholder="Öğrenci Ara...", label_visibility="collapsed")
+        arama = st.text_input("", placeholder="Ara...", label_visibility="collapsed")
         
         # Son Dersler
         son_dersler = {}
@@ -141,12 +169,11 @@ if sh:
                     son_dersler[row_log["ogrenci"]] = row_log["tarih_dt"].strftime("%d.%m")
 
         if not df_ogrenci.empty:
-            # Filtreleme
             df_aktif = df_ogrenci[df_ogrenci["durum"] == "active"]
             if arama:
                 df_aktif = df_aktif[df_aktif["isim"].str.contains(arama, case=False)]
             
-            # 8 SÜTUNLU IZGARA
+            # --- 8 SÜTUNLU IZGARA ---
             SUTUN_SAYISI = 8 
             cols = st.columns(SUTUN_SAYISI)
             
@@ -159,38 +186,42 @@ if sh:
                         bakiye = row["bakiye"]
                         renk = "green" if bakiye >= 5 else "orange" if bakiye > 0 else "red"
                         
-                        # İSİM
                         st.markdown(f"<div class='ogrenci-isim'>{isim_tam}</div>", unsafe_allow_html=True)
-                        # BAKİYE
                         st.markdown(f"<div class='ogrenci-bakiye' style='color:{renk}'>{bakiye}</div>", unsafe_allow_html=True)
-                        # TARİH
+                        
                         son_tarih = son_dersler.get(isim_tam, "-")
                         st.markdown(f"<div class='son-tarih'>{son_tarih}</div>", unsafe_allow_html=True)
                         
-                        # BUTONLAR
-                        if st.button("➖", key=f"d_{idx}"):
+                        # BUTONLAR: DÜŞ (Kırmızı) ve İPTAL (Beyaz)
+                        # 'type="primary"' -> CSS ile Kırmızı yapıldı
+                        # 'type="secondary"' (varsayılan) -> CSS ile Beyaz yapıldı
+                        if st.button("DÜŞ", key=f"d_{idx}", type="primary"):
                             ws = sh.worksheet("Ogrenciler")
                             cell = ws.find(isim_tam)
                             ws.update_cell(cell.row, 2, int(bakiye - 1))
                             zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
                             sh.worksheet("Loglar").append_row([zaman, isim_tam, "Ders Yapıldı", ""])
+                            st.toast("Düşüldü")
+                            time.sleep(0.1)
                             st.rerun()
                             
-                        if st.button("➕", key=f"i_{idx}"):
+                        if st.button("İPTAL", key=f"i_{idx}"):
                             ws = sh.worksheet("Ogrenciler")
                             cell = ws.find(isim_tam)
                             ws.update_cell(cell.row, 2, int(bakiye + 1))
                             zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
                             sh.worksheet("Loglar").append_row([zaman, isim_tam, "Ders İptal/İade", "Düzeltme"])
+                            st.toast("İade")
+                            time.sleep(0.1)
                             st.rerun()
 
     # === 2. YÖNETİM ===
     elif menu == "Yönetim":
-        st.header("⚙️ Yönetim")
+        st.header("⚙️")
         t1, t2 = st.tabs(["Yeni", "Düzenle"])
         with t1:
             with st.form("ekle"):
-                ad = st.text_input("Ad Soyad")
+                ad = st.text_input("Ad")
                 bas = st.number_input("Paket", value=10)
                 if st.form_submit_button("Kaydet"):
                     zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -209,12 +240,12 @@ if sh:
                         ws.update_cell(cell.row, 2, int(sec_veri["bakiye"] + ek))
                         zaman = datetime.now().strftime("%Y-%m-%d %H:%M")
                         sh.worksheet("Loglar").append_row([zaman, sec, "Paket Yüklendi", f"{ek} ders"])
-                        st.success("Yüklendi")
+                        st.success("OK")
                         st.rerun()
 
     # === 3. ÖLÇÜMLER ===
     elif menu == "Ölçüm":
-        st.subheader("📏 Ölçüm")
+        st.subheader("📏")
         o_sec = None
         if not df_ogrenci.empty:
             o_sec = st.selectbox("Öğrenci", df_ogrenci["isim"].tolist())
