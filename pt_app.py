@@ -8,7 +8,7 @@ import time
 # --- AYARLAR ---
 st.set_page_config(page_title="PT Levent Hoca", layout="wide", page_icon="💪")
 
-# --- TASARIM CSS ---
+# --- CSS TASARIM ---
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; }
@@ -149,7 +149,7 @@ if sh:
             
             st.markdown(f"""
             <div class="ticket-wrapper">
-                <div style="font-size:12px; letter-spacing:2px; color:#95a5a6; margin-bottom:10px;">PT LEVENT HOCA</div>
+                <div style="font-size:12px; letter-spacing:2px; color:#95a5a6; margin-bottom:10px;">PT HOCA PANELİ</div>
                 <div class="ticket-name">{kisi['isim']}</div>
                 <div class="ticket-date">📅 {datetime.now().strftime("%d.%m.%Y")}</div>
                 <div class="ticket-balance-box">
@@ -216,24 +216,30 @@ if sh:
                             sh.worksheet("Loglar").append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), isim, "Ders İptal/İade", "Düzeltme"])
                             st.toast("Geri alındı"); time.sleep(0.5); st.rerun()
 
-    # === 2. ÖĞRENCİ YÖNETİMİ ===
+    # === 2. ÖĞRENCİ YÖNETİMİ (GÜNCELLENDİ: İSİM KONTROLÜ) ===
     elif menu == "Öğrenci Ekle/Düzenle":
         st.header("⚙️ Öğrenci Yönetimi")
         t1, t2 = st.tabs(["Yeni Kayıt", "Düzenle / Paket Yükle"])
+        
         with t1:
             with st.form("ekle"):
                 ad = st.text_input("Ad Soyad")
                 bas = st.number_input("Paket", value=10)
                 nt = st.text_area("Notlar")
                 dt_input = st.date_input("Doğum Tarihi (Opsiyonel)", value=None, min_value=datetime(1950,1,1))
+                
+                # --- İSİM KONTROLÜ EKLENDİ ---
                 if st.form_submit_button("Kaydet"):
-                    sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", datetime.now().strftime("%Y-%m-%d"), dt_input.strftime("%Y-%m-%d") if dt_input else ""])
-                    st.success("Kaydedildi"); st.rerun()
+                    if not ad.strip(): # İsim boşsa
+                        st.warning("⚠️ Lütfen İsim Alanını Doldurunuz!")
+                    else:
+                        sh.worksheet("Ogrenciler").append_row([ad, bas, nt, "active", datetime.now().strftime("%Y-%m-%d"), dt_input.strftime("%Y-%m-%d") if dt_input else ""])
+                        st.success("Kaydedildi"); st.rerun()
+                        
         with t2:
             if not df_ogrenci.empty:
                 sec = st.selectbox("Öğrenci Seç", df_ogrenci["isim"].tolist())
                 sec_veri = df_ogrenci[df_ogrenci["isim"] == sec].iloc[0]
-                
                 c1, c2 = st.columns(2)
                 with c1:
                     st.subheader("📦 Paket İşlemleri")
@@ -252,24 +258,19 @@ if sh:
 
                 with c2:
                     st.subheader("📝 Bilgiler")
-                    # NOT DÜZENLEME
                     mevcut_not = sec_veri.get("notlar", "")
                     if mevcut_not == "nan": mevcut_not = ""
                     yeni_not = st.text_area("Notlar", value=mevcut_not)
                     
-                    # DOĞUM TARİHİ DÜZENLEME (YENİ EKLENDİ)
                     mevcut_dt_str = str(sec_veri.get("dogum_tarihi", "")).strip()
                     dt_value = None
                     if mevcut_dt_str and mevcut_dt_str != "nan":
                         try: dt_value = pd.to_datetime(mevcut_dt_str, dayfirst=True).date()
                         except: pass
-                    
                     yeni_dt = st.date_input("Doğum Tarihi", value=dt_value, min_value=datetime(1950,1,1))
 
                     if st.button("Bilgileri Kaydet"):
-                        ws = sh.worksheet("Ogrenciler")
-                        cell = ws.find(sec)
-                        # Notlar 3. sütun, Doğum Tarihi 6. sütun
+                        ws = sh.worksheet("Ogrenciler"); cell = ws.find(sec)
                         ws.update_cell(cell.row, 3, yeni_not)
                         dt_save = yeni_dt.strftime("%Y-%m-%d") if yeni_dt else ""
                         ws.update_cell(cell.row, 6, dt_save)
@@ -281,7 +282,6 @@ if sh:
                     df_log = tarihleri_zorla_cevir(df_log, "tarih")
                     kisi_log = df_log[df_log["ogrenci"] == sec].copy()
                     if not kisi_log.empty:
-                        # YENİDEN ESKİYE SIRALA (İSTEK ÜZERİNE)
                         kisi_log = kisi_log.sort_values(by="tarih_dt", ascending=False)
                         st.dataframe(kisi_log[["tarih", "islem", "detay"]], use_container_width=True)
                     else:
@@ -306,7 +306,7 @@ if sh:
 
     # === 4. RAPORLAR ===
     elif menu == "Raporlar":
-        st.header("📊 Raporlar")
+        st.header("📊 Genel Raporlar")
         if not df_log.empty:
             df_log = tarihleri_zorla_cevir(df_log, "tarih")
             df_log = df_log.dropna(subset=["tarih_dt"])
